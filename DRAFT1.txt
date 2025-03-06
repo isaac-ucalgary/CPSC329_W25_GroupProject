@@ -8,9 +8,9 @@ The scope of this project will focus on medium to large-sized businesses and the
 To conduct this research, each team member will focus on a specific aspect of firewall use. We will analyze academic literature, industry reports, and case studies to develop a well-rounded perspective on the advantages and limitations of firewalls in corporate cybersecurity. Our final report will consolidate these findings and provide actionable recommendations for businesses on how to optimize their firewall strategies. By following this approach, we aim to offer valuable insights that help companies strengthen their cybersecurity posture and make more informed security decisions.
 
 Members:
-Clark, James	
-Davies, Ethan	
-Shiells Thomas, Isaac	
-Owen, Gwilym
+Clark, James	  UCID:
+Davies, Ethan	  UCID:30106437
+Shiells Thomas, Isaac	UCID:
+Owen, Gwilym    UCID:30188047
 
 Our 5th member as listed on the spreadsheet has not seen fit to respond to communications or join the D2L group at this time and has therefore been left off this proposal.
