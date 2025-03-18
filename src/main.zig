@@ -1,5 +1,6 @@
 // Imports
 const std = @import("std");
+const ProcessedArgs = @import("./process_args.zig").ProcessedArgs;
 
 // Inheritance
 const Allocator = std.mem.Allocator;
@@ -9,7 +10,7 @@ const eql = std.mem.eql;
 const log = std.log;
 
 const help_message: []const u8 =
-    \\Encrypt or decrypt a message using RSA (not OAEP).
+    \\Encrypt or decrypt a message using RSA (without OAEP).
     \\Result will printed to standard out.
     \\
     \\Usage: 
@@ -40,103 +41,36 @@ pub fn main() !void {
     _ = stdout_writer;
 
     // ----- PARSE ARGS -----
-    var args = std.process.args();
-    defer args.deinit();
-    _ = args.skip(); // Skip binary executable name
-
-    // Parse command
-    var do_encrypt: bool = false;
-    var do_decrypt: bool = false;
-    if (args.next()) |command| {
-        do_encrypt = eql(u8, command, "encrypt");
-        do_decrypt = eql(u8, command, "decrypt");
-    }
-    // Print and exit if no valid command was supplied
-    if (!do_encrypt and !do_decrypt) {
-        std.debug.print(help_message, .{});
+    var processed_args = ProcessedArgs.init(allocator) catch |err| {
+        switch (err) {
+            error.AccessDenied => std.log.err("File access denied, Aborting...", .{}),
+            error.FileNotFound => std.log.err("Provided file does not exist. Aborting...", .{}),
+            error.FileTooBig => std.log.err("The provided file is too big. Aborting...", .{}),
+            error.HelpFlagSet, error.MissingCommand => std.debug.print("{s}", .{help_message}),
+            error.OutOfMemory => std.log.err("System ran out of memory. Aborting...", .{}),
+            error.NoSource, error.TooManySources => std.log.err(
+                "Exactly one of either \"--text <text>\" or \"--file <path>\" must be provided. Aborting...",
+                .{},
+            ),
+            error.InvalidCommand => {
+                std.log.err("Not a valid command.", .{});
+                std.debug.print("\n{s}", .{help_message});
+            },
+            else => return err,
+        }
         return;
-    }
-
-    // Define variables to be collected from cli args
-    var public_key: ?BigIntManaged = null;
-    defer if (public_key) |*k| k.deinit();
-    var private_key: ?BigIntManaged = null;
-    defer if (private_key) |*k| k.deinit();
-    var input_text: ?[]const u8 = null;
-    var input_file: ?[]const u8 = null;
-
-    // Iterate over all of the cli args
-    while (args.next()) |arg| {
-        // Parse options
-        if (eql(u8, arg, "--public_key")) try getKeyArg(allocator, &public_key, &args);
-        if (eql(u8, arg, "--private_key")) try getKeyArg(allocator, &private_key, &args);
-        if (eql(u8, arg, "--text")) input_text = args.next();
-        if (eql(u8, arg, "--file")) input_file = args.next();
-    }
-
-    var source_text: []u8 = undefined;
-    // Only input text was provided
-    if (input_text != null and input_file == null) {
-        source_text = try allocator.alloc(u8, input_text.?.len);
-        @memcpy(source_text, input_text.?);
-    }
-    // Only input file was provided
-    else if (input_text == null and input_file != null) {
-        source_text = std.fs.cwd().readFileAlloc(allocator, input_file.?, @as(usize, 0) -% 1) catch |err| {
-            switch (err) {
-                error.FileTooBig => {
-                    log.err("File too big", .{});
-                    return;
-                },
-                else => return err,
-            }
-        };
-    }
-    // Neither or both plain text and file path were provided
-    else {
-        log.err("Exactly one of either \"--text <text>\" or \"--file <path>\" must be provided. Aborting...", .{});
-        return;
-    }
-    defer allocator.free(source_text);
+    };
+    defer processed_args.deinit();
 
     // ----- ENCRYPT -----
-    if (do_encrypt) {
+    if (processed_args.do_encrypt) {
         std.debug.print("TODO Encrypt\n", .{});
-        if (private_key) |_| log.warn("Private key provided but not required for encrypting.", .{});
+        if (processed_args.private_key) |_| log.warn("Private key provided but not required for encrypting.", .{});
     }
 
     // ----- DECRYPT -----
-    if (do_decrypt) {
+    if (processed_args.do_decrypt) {
         std.debug.print("TODO Decrypt\n", .{});
-        if (public_key) |_| log.warn("Public key provided but not required for decrypting.", .{});
+        if (processed_args.public_key) |_| log.warn("Public key provided but not required for decrypting.", .{});
     }
-}
-
-fn getKeyArg(allocator: Allocator, output: *?BigIntManaged, args: *std.process.ArgIterator) !void {
-
-    // Get the next value if it exists
-    var value: []const u8 = args.next() orelse return;
-
-    // Create variable to store the integer base
-    // Get the base from any existing integer affix
-    var base: u8 = 10;
-    if (value.len >= 2 and value[0] == '0') {
-        // Obtain the number base of the value
-        base = switch (value[1]) {
-            'x', 'X' => 16,
-            'o', 'O' => 8,
-            'b', 'B' => 2,
-            else => 10,
-        };
-
-        // Remove integer affix
-        if (value[1] < 48 or 57 < value[1]) value = value[2..];
-    }
-
-    // Parse the value
-    output.* = try BigIntManaged.init(allocator);
-    output.*.?.setString(base, value) catch {
-        output.*.?.deinit();
-        output.* = null;
-    };
 }
