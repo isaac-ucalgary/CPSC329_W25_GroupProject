@@ -309,3 +309,4 @@ TSWLatexianTemp*
 
 **/*secret*
 **/__pycache__/
+**/.zig-cache/
