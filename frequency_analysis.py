@@ -9,6 +9,8 @@ def analyse_freq(string):
             frequencies[s] += 1
         else: 
             frequencies.update({s : 1})
+    for f in frequencies:
+        print(f"{f} : {frequencies[f]}")
 
 
-analyse_freq("aaaa")
+analyse_freq("The quick brown fox jumps over the lazy dog.")
