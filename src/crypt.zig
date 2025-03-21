@@ -2,18 +2,19 @@
 const std = @import("std");
 
 // Inheritance
-const BigIntManaged = std.math.big.int.Managed;
-const Base64Decoder = std.base64.standard.Decoder;
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
+const Base64Decoder = std.base64.standard.Decoder;
+const BigIntManaged = std.math.big.int.Managed;
 const der = std.crypto.Certificate.der;
+const maxInt = std.math.maxInt;
 
 /// RSA Public Key
 pub const PublicKey = struct {
-    e: u64,
-    n: BigIntManaged,
+    exponent: u64,
+    modulus: BigIntManaged,
 
-    /// Parses the RSA Public Key from the *input* string using the *RFC4716*
+    /// Parses the RSA Public Key from the *input* string using the *RFC4253*
     /// standard.
     pub fn parse(allocator: Allocator, input: []const u8) !PublicKey {
         // Decode the input
@@ -28,6 +29,11 @@ pub const PublicKey = struct {
         const algorithm_identifier_byte_length: u32 = readOffsetInt(u32, base64_decoded, &byte_offset, .{});
         const algorithm_identifier: []const u8 = getOffsetSlice(base64_decoded, &byte_offset, algorithm_identifier_byte_length);
 
+        // Check
+        if (!std.mem.eql(u8, algorithm_identifier, "ssh-rsa")) {
+            return error.IncorrectAlgorithm;
+        }
+
         // Get the exponent
         const exponent_byte_length: u32 = readOffsetInt(u32, base64_decoded, &byte_offset, .{});
         const exponent: u64 = readOffsetInt(u64, base64_decoded, &byte_offset, .{ .length = exponent_byte_length });
@@ -36,21 +42,24 @@ pub const PublicKey = struct {
         const modulus_byte_length: u32 = readOffsetInt(u32, base64_decoded, &byte_offset, .{});
         const modulus: BigIntManaged = try readOffsetBigInt(allocator, base64_decoded, &byte_offset, modulus_byte_length);
 
-        std.debug.print("Algorithm Identifier Byte Length: {d}\n", .{algorithm_identifier_byte_length});
-        std.debug.print("Algorithm Identifier: {s}\n", .{algorithm_identifier});
-        std.debug.print("Exponent Byte Length: {d}\n", .{exponent_byte_length});
-        std.debug.print("Exponent: {d}\n", .{exponent});
-        std.debug.print("Modulus Byte Length: {d}\n", .{modulus_byte_length});
-        std.debug.print("Modulus: {d}\n\n\n\n", .{modulus});
-
         return PublicKey{
-            .e = exponent,
-            .n = modulus,
+            .exponent = exponent,
+            .modulus = modulus,
         };
     }
 
     pub fn deinit(self: *PublicKey) void {
-        self.n.deinit();
+        self.modulus.deinit();
+    }
+
+    /// Returns the exponent component of the public key
+    pub fn e(self: PublicKey) u64 {
+        return self.exponent;
+    }
+
+    /// Returns the modulus component of the public key
+    pub fn n(self: PublicKey) u64 {
+        return self.modulus;
     }
 };
 
@@ -75,23 +84,23 @@ pub const PrivateKey = struct {
 
         // Get the first element of the der encoded bytes which should be an
         // der element with a sequence tag
-        const sequence_der_element = try der.Element.parse(base64_decoded, 0);
+        const der_sequence_element = try der.Element.parse(base64_decoded, 0);
 
         // Get the elements of the sequence
-        var der_sequence: DerSequence = try DerSequence.init(allocator, sequence_der_element, base64_decoded);
+        var der_sequence: DerSequence = try DerSequence.init(allocator, der_sequence_element, base64_decoded);
         defer der_sequence.deinit();
 
         // Initialize the private key
         return PrivateKey{
             .version = readOffsetInt(u64, der_sequence.getElementSlice(0), 0, .{}),
-            .modulus = try readOffsetBigInt(allocator, der_sequence.getElementSlice(1), 0, std.math.maxInt(usize)),
-            .public_exponent = try readOffsetBigInt(allocator, der_sequence.getElementSlice(2), 0, std.math.maxInt(usize)),
-            .private_exponent = try readOffsetBigInt(allocator, der_sequence.getElementSlice(3), 0, std.math.maxInt(usize)),
-            .prime1 = try readOffsetBigInt(allocator, der_sequence.getElementSlice(4), 0, std.math.maxInt(usize)),
-            .prime2 = try readOffsetBigInt(allocator, der_sequence.getElementSlice(5), 0, std.math.maxInt(usize)),
-            .exponent1 = try readOffsetBigInt(allocator, der_sequence.getElementSlice(6), 0, std.math.maxInt(usize)),
-            .exponent2 = try readOffsetBigInt(allocator, der_sequence.getElementSlice(7), 0, std.math.maxInt(usize)),
-            .coefficient = try readOffsetBigInt(allocator, der_sequence.getElementSlice(8), 0, std.math.maxInt(usize)),
+            .modulus = try readOffsetBigInt(allocator, der_sequence.getElementSlice(1), 0, maxInt(usize)),
+            .public_exponent = try readOffsetBigInt(allocator, der_sequence.getElementSlice(2), 0, maxInt(usize)),
+            .private_exponent = try readOffsetBigInt(allocator, der_sequence.getElementSlice(3), 0, maxInt(usize)),
+            .prime1 = try readOffsetBigInt(allocator, der_sequence.getElementSlice(4), 0, maxInt(usize)),
+            .prime2 = try readOffsetBigInt(allocator, der_sequence.getElementSlice(5), 0, maxInt(usize)),
+            .exponent1 = try readOffsetBigInt(allocator, der_sequence.getElementSlice(6), 0, maxInt(usize)),
+            .exponent2 = try readOffsetBigInt(allocator, der_sequence.getElementSlice(7), 0, maxInt(usize)),
+            .coefficient = try readOffsetBigInt(allocator, der_sequence.getElementSlice(8), 0, maxInt(usize)),
         };
     }
 
@@ -154,32 +163,34 @@ const DerSequence = struct {
     sequence_element: der.Element,
     bytes: []const u8,
 
+    /// Generates an array list of DER elements that compose a DER sequence element (not recursive).
     pub fn init(allocator: Allocator, sequence_element: der.Element, bytes: []const u8) !DerSequence {
-        // Create the sequence array list
-        var sequence = ArrayList(der.Element).init(allocator);
-
         // Check that the provided element is a sequence
         if (sequence_element.identifier.tag != der.Tag.sequence) {
             return error.ElementIsNotASequence;
         }
 
-        // Get the first element of the sequence
-        try sequence.append(try der.Element.parse(bytes, sequence_element.slice.start));
-
-        // Get any additional elements of the sequence
-        var next_element_start: u32 = sequence.getLast().slice.end;
-        while (next_element_start < sequence_element.slice.end) {
-            try sequence.append(try der.Element.parse(bytes, next_element_start));
-            next_element_start = sequence.getLast().slice.end;
-        }
-
-        // Return the constructed DerSequence
-        return DerSequence{
+        // Create the DerSequence
+        var der_sequence = DerSequence{
             .allocator = allocator,
-            .sequence = sequence,
+            .sequence = ArrayList(der.Element).init(allocator),
             .sequence_element = sequence_element,
             .bytes = bytes,
         };
+        errdefer der_sequence.deinit();
+
+        // Get the first element of the sequence
+        try der_sequence.sequence.append(try der.Element.parse(bytes, sequence_element.slice.start));
+
+        // Get any additional elements of the sequence
+        var next_element_start: u32 = der_sequence.sequence.getLast().slice.end;
+        while (next_element_start < sequence_element.slice.end) {
+            try der_sequence.sequence.append(try der.Element.parse(bytes, next_element_start));
+            next_element_start = der_sequence.sequence.getLast().slice.end;
+        }
+
+        // Return the constructed DerSequence
+        return der_sequence;
     }
 
     pub fn deinit(self: *DerSequence) void {
@@ -203,7 +214,11 @@ const DerSequence = struct {
 /// of the buffer less the offset, which ever is smaller.
 fn readOffsetInt(T: type, buffer: []const u8, offset: anytype, options: struct { length: usize = @sizeOf(T) }) T {
     // Get the offset value
-    const offset_value: u64 = @as(u64, if (@TypeOf(offset) == std.builtin.Type.Pointer) offset.* else offset);
+    const offset_value: u64 = switch (@TypeOf(offset)) {
+        *usize => offset.*,
+        comptime_int => offset,
+        else => return error.UnallowedType,
+    };
 
     // Get the safe length
     const length: u64 = @as(u64, @min(options.length, buffer.len - offset_value));
@@ -216,7 +231,7 @@ fn readOffsetInt(T: type, buffer: []const u8, offset: anytype, options: struct {
     );
 
     // Increment the offset by the requested number of bytes from length
-    if (@TypeOf(offset) == std.builtin.Type.Pointer) {
+    if (@TypeOf(offset) == *usize) {
         offset.* += length;
     }
 
@@ -234,7 +249,11 @@ fn readOffsetInt(T: type, buffer: []const u8, offset: anytype, options: struct {
 /// should be used.
 fn readOffsetBigInt(allocator: Allocator, buffer: []const u8, offset: anytype, length: usize) !BigIntManaged {
     // Get the offset value
-    const offset_value: u64 = @as(u64, if (@TypeOf(offset) == std.builtin.Type.Pointer) offset.* else offset);
+    const offset_value: u64 = switch (@TypeOf(offset)) {
+        *usize => offset.*,
+        comptime_int => offset,
+        else => return error.UnallowedType,
+    };
 
     // Get the safe length
     const length_safe: u64 = @as(u64, if (length == 0) (buffer.len - offset_value) else @min(length, buffer.len - offset_value));
@@ -249,7 +268,7 @@ fn readOffsetBigInt(allocator: Allocator, buffer: []const u8, offset: anytype, l
     }
 
     // Increment the offset by the provided length
-    if (@TypeOf(offset) == std.builtin.Type.Pointer) {
+    if (@TypeOf(offset) == *usize) {
         offset.* += length_safe;
     }
 
@@ -278,13 +297,13 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    // var pubkey = try PublicKey.parse(
-    //     allocator,
-    //     //"AAAAB3NzaC1yc2EAAAADAQABAAACAQDH+UiVUz6XFRW2jqgxcEU91V7RN+UzMIkU3ZfMHYaESAizcw0iR8jFZ7/CgwEvu6AI3VPhB/53N4LmOFsO1nu0YXjfCFSFvrYHmGIcY1LMgV6XebzherHeFDr7DvbPfrpEEbmdxtJBNtaXKGYouVCWgIK9FjuitT4s21sg+awcEme9eDy0idxzQknrSesepx6+/7odxFyv9st1oLO+HGf8JuoDYjdlhG3cu4nZIXF/ziR5FlJQrz8rCIA0gNvWWKeUs+3xXPjlEsodrNYxeZtXFwKj0B/29GeB0y8LFKGElIQx2NBHJ4p1FE551j16/tanEc+HNzGjku7FYqNcxnd4DksYxNsZJg6yd+2UESWzz+MGlaKHJh0/7QPJUMmeXd7QIS03FYatseByFzl0K22NoKxBi6cBSCvxS8X4lse5ldWY4+8il86S0cG9jlayfGo7yznpJE2ZbcWmkp3M9/JPdQYZXAt+jijXNTDOVjDWm0Y88jqgcZXO4eJTSzNwfymFl6R9Te7oQYeb7gS+hH+JWBvOfZ1/NZOJP+ngtyaV3vYqiHeR19fHnRKC3/ujf5D4Z3mZsdZ2BRQrg+JKMZcvK8kGgaHfiFN9wFEchwDF10Eqv4qESH5f3JG/N8pCHOAVt+FPqUZRCakO7GbQ/XlSFwOCo5NzZDCqwYntdUDCmQ==",
-    //     "AAAAB3NzaC1yc2EAAAADAQABAAAAgQCnMq4mGjCKoUb2uvmmxOgIg3Zn8Tlw/FXbdelDN7nwNbJw8sW9cprdoI2JTCm+O9GIv+StQB1hWwAIpxcpTIA6cueKAqu1vWj8cild2GECFAryinuKSByqB/fdsBhS2oESeZogPkFMpR45MVZ9fQjA4KBgvXEwc+sgY4Vs0IqNqQ==",
-    // );
-    //
-    // defer pubkey.deinit();
+    var pubkey = try PublicKey.parse(
+        allocator,
+        //"AAAAB3NzaC1yc2EAAAADAQABAAACAQDH+UiVUz6XFRW2jqgxcEU91V7RN+UzMIkU3ZfMHYaESAizcw0iR8jFZ7/CgwEvu6AI3VPhB/53N4LmOFsO1nu0YXjfCFSFvrYHmGIcY1LMgV6XebzherHeFDr7DvbPfrpEEbmdxtJBNtaXKGYouVCWgIK9FjuitT4s21sg+awcEme9eDy0idxzQknrSesepx6+/7odxFyv9st1oLO+HGf8JuoDYjdlhG3cu4nZIXF/ziR5FlJQrz8rCIA0gNvWWKeUs+3xXPjlEsodrNYxeZtXFwKj0B/29GeB0y8LFKGElIQx2NBHJ4p1FE551j16/tanEc+HNzGjku7FYqNcxnd4DksYxNsZJg6yd+2UESWzz+MGlaKHJh0/7QPJUMmeXd7QIS03FYatseByFzl0K22NoKxBi6cBSCvxS8X4lse5ldWY4+8il86S0cG9jlayfGo7yznpJE2ZbcWmkp3M9/JPdQYZXAt+jijXNTDOVjDWm0Y88jqgcZXO4eJTSzNwfymFl6R9Te7oQYeb7gS+hH+JWBvOfZ1/NZOJP+ngtyaV3vYqiHeR19fHnRKC3/ujf5D4Z3mZsdZ2BRQrg+JKMZcvK8kGgaHfiFN9wFEchwDF10Eqv4qESH5f3JG/N8pCHOAVt+FPqUZRCakO7GbQ/XlSFwOCo5NzZDCqwYntdUDCmQ==",
+        "AAAAB3NzaC1yc2EAAAADAQABAAAAgQCnMq4mGjCKoUb2uvmmxOgIg3Zn8Tlw/FXbdelDN7nwNbJw8sW9cprdoI2JTCm+O9GIv+StQB1hWwAIpxcpTIA6cueKAqu1vWj8cild2GECFAryinuKSByqB/fdsBhS2oESeZogPkFMpR45MVZ9fQjA4KBgvXEwc+sgY4Vs0IqNqQ==",
+    );
+
+    defer pubkey.deinit();
 
     var private_key = try PrivateKey.parse(
         allocator,
