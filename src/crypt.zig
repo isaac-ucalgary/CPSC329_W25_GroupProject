@@ -292,6 +292,88 @@ fn getOffsetSlice(buffer: []const u8, offset: *usize, length: usize) []const u8 
     return return_slice;
 }
 
+fn bigIntModulo(dividend: *BigIntManaged, modulus: *BigIntManaged, residue: *BigIntManaged) !void {
+    // Create the residue
+    try dividend.copy(residue.*.toConst());
+
+    // Create quotient output
+    var q = try dividend.clone();
+    defer q.deinit();
+
+    // Calculate the residue
+    try q.divFloor(residue, dividend, modulus);
+
+    // // Insure the residue is positive
+    // while (!residue.*.isPositive()) {
+    //     try residue.add(residue, modulus);
+    // }
+    //
+    // // Reduce the residue until it is less than the modulus
+    // while (residue.*.order(modulus.*) == std.math.Order.gt) {
+    //     try residue.sub(residue, modulus);
+    // }
+}
+
+// I know there are ways to speed this up using math but I don't care right now
+fn bigIntPowerModulo(dividend: *BigIntManaged, exponent: u64, modulus: *BigIntManaged, residue: *BigIntManaged) !void {
+    // Create the residue
+    try dividend.copy(residue.*.toConst());
+
+    // Get the first modulo residue
+    try bigIntModulo(dividend, modulus, residue);
+
+    try residue.pow(dividend, @intCast(exponent));
+    try bigIntModulo(dividend, modulus, residue);
+
+    // // Calculate the exponent, taking the modulo each time
+    // for (0..exponent) |_| {
+    //     std.debug.print("hi\n", .{});
+    //     std.debug.print("Residue: {any}\n", .{residue});
+    //     try residue.mul(residue, dividend);
+    //     try bigIntModulo(dividend, modulus, residue);
+    // }
+}
+
+pub fn encrypt(allocator: Allocator, public_key: PublicKey, message: []const u8) ![]u8 {
+
+    // Create a big int for the cipher text
+    var plain_text_int = try readOffsetBigInt(allocator, message, 0, std.math.maxInt(usize));
+    defer plain_text_int.deinit();
+
+    // Clone the plain text into the initial form of the cipher text
+    var cipher_text_int = try plain_text_int.clone();
+    defer cipher_text_int.deinit();
+
+    var modulus = try public_key.modulus.clone();
+    defer modulus.deinit();
+
+    // Calculate the cipher text
+    try bigIntPowerModulo(&plain_text_int, public_key.exponent, &modulus, &cipher_text_int);
+
+    // Convert the cipher text back to a string
+    return try cipher_text_int.toString(allocator, 16, std.fmt.Case.lower);
+}
+
+pub fn decrypt(allocator: Allocator, private_key: PrivateKey, cipher_text: []const u8) ![]u8 {
+
+    // Get the cipher text int from the cipher text
+    var cipher_text_int = try readOffsetBigInt(allocator, cipher_text, 0, std.math.maxInt(usize));
+    defer cipher_text_int.deinit();
+
+    // Clone the cipher text into the initial form of the plain text
+    var plain_text_int = try cipher_text_int.clone();
+    defer plain_text_int.deinit();
+
+    var modulus = try private_key.modulus.clone();
+    defer modulus.deinit();
+
+    // Calculate the cipher text
+    try bigIntPowerModulo(&cipher_text_int, private_key.private_exponent, &modulus, &plain_text_int);
+
+    // Convert the plain text text back to a string
+    return try plain_text_int.toString(allocator, 16, std.fmt.Case.lower);
+}
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -329,5 +411,16 @@ pub fn main() !void {
     );
     defer private_key.deinit();
 
-    std.debug.print("{any}", .{private_key});
+    const plain_text: []const u8 = "hello world";
+
+    const cipher_text: []u8 = try encrypt(allocator, pubkey, plain_text);
+    defer allocator.free(cipher_text);
+
+    std.debug.print("Plain text: {s}\n\n\n", .{plain_text});
+    std.debug.print("Cipher text: {s}\n\n\n", .{cipher_text});
+
+    const decrypted_plain_text: []u8 = try decrypt(allocator, private_key, cipher_text);
+    defer allocator.free(decrypted_plain_text);
+
+    std.debug.print("Decrypted plain text: {s}\n\n\n", .{decrypted_plain_text});
 }
