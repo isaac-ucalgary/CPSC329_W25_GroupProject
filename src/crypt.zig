@@ -11,41 +11,60 @@ const maxInt = std.math.maxInt;
 const startsWith = std.mem.startsWith;
 const endsWith = std.mem.endsWith;
 
-/// RSA Public Key
+/// RSA Public Key following the *RFC 4253* standard.
 pub const PublicKey = struct {
     exponent: u64,
     modulus: BigIntManaged,
 
-    /// Parses the RSA Public Key from the *input* string using the *RFC4253*
+    /// Parses the RSA Public Key from the *input* string using the ***RFC 4253***
     /// standard.
+    ///
+    /// Simply, the *input* key string must uphold the following:
+    ///   - The string must be one single line.
+    ///   - The string must start with *"ssh-rsa "*.
+    ///   - The following key itself mush be base 64 encoded and follow the
+    ///     *RFC 4253* standard.
+    ///   - The base 64 encoded key is terminated with a space (*" "*) character.
+    ///   - Any text following this terminating space character will be ignored.
     pub fn parse(allocator: Allocator, input: []const u8) !PublicKey {
-        // Decode the input
-        const base64_decoded = try allocator.alloc(u8, try Base64Decoder.calcSizeForSlice(input));
-        defer allocator.free(base64_decoded);
-        try Base64Decoder.decode(base64_decoded, input);
+        // Define the expected type of the input key
+        const key_type: []const u8 = "ssh-rsa";
+
+        // --- Check that the input is of the correct format ---
+        if (!startsWith(u8, input, key_type)) return error.InvalidKeyFormat; // Check prefix
+
+        // --- Remove the prefix ---
+        var input_key_parts = std.mem.splitScalar(u8, input, ' ');
+        _ = input_key_parts.first(); // Skip the key prefix
+        const input_key: []const u8 = input_key_parts.next() orelse return error.InvalidKeyFormat; // Get the main key
+
+        // --- Decode the input ---
+        const base64_decoded_key = try allocator.alloc(
+            u8,
+            Base64Decoder.calcSizeForSlice(input_key) catch return error.InvalidKey,
+        );
+        defer allocator.free(base64_decoded_key);
+        Base64Decoder.decode(base64_decoded_key, input_key) catch return error.InvalidKey;
 
         // Create a variable for recording the position in the decoded binary
         var byte_offset: usize = 0;
 
         // Get the algorithm identifier
-        const algorithm_identifier_byte_length: u32 = readOffsetInt(u32, base64_decoded, &byte_offset, .{});
-        const algorithm_identifier: []const u8 = getOffsetSlice(base64_decoded, &byte_offset, algorithm_identifier_byte_length);
+        const algorithm_identifier_byte_length: u32 = readOffsetInt(u32, base64_decoded_key, &byte_offset, .{});
+        const algorithm_identifier: []const u8 = getOffsetSlice(base64_decoded_key, &byte_offset, algorithm_identifier_byte_length);
 
-        // Check
-        if (!std.mem.eql(u8, algorithm_identifier, "ssh-rsa")) {
-            return error.IncorrectAlgorithm;
-        }
+        // Check the key algorithm
+        if (!std.mem.eql(u8, algorithm_identifier, key_type)) return error.InvalidKeyAlgorithm;
 
         // Get the exponent
-        const exponent_byte_length: u32 = readOffsetInt(u32, base64_decoded, &byte_offset, .{});
-        const exponent: u64 = readOffsetInt(u64, base64_decoded, &byte_offset, .{ .length = exponent_byte_length });
-        // const exponent: u64 = 3;
+        const exponent_byte_length: u32 = readOffsetInt(u32, base64_decoded_key, &byte_offset, .{});
+        const exponent: u64 = readOffsetInt(u64, base64_decoded_key, &byte_offset, .{ .length = exponent_byte_length });
 
         // Get the modulus
-        const modulus_byte_length: u32 = readOffsetInt(u32, base64_decoded, &byte_offset, .{});
-        const modulus: BigIntManaged = try readOffsetBigInt(allocator, base64_decoded, &byte_offset, modulus_byte_length);
-        // const modulus: BigIntManaged = try BigIntManaged.initSet(allocator, 187);
+        const modulus_byte_length: u32 = readOffsetInt(u32, base64_decoded_key, &byte_offset, .{});
+        const modulus: BigIntManaged = try readOffsetBigInt(allocator, base64_decoded_key, &byte_offset, modulus_byte_length);
 
+        // Return the parsed public key
         return PublicKey{
             .exponent = exponent,
             .modulus = modulus,
