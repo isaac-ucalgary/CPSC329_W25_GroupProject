@@ -13,7 +13,7 @@ const endsWith = std.mem.endsWith;
 
 /// RSA Public Key following the *RFC 4253* standard.
 pub const PublicKey = struct {
-    exponent: u64,
+    exponent: BigIntManaged,
     modulus: BigIntManaged,
 
     /// Parses the RSA Public Key from the *input* string using the ***RFC 4253***
@@ -58,7 +58,7 @@ pub const PublicKey = struct {
 
         // Get the exponent
         const exponent_byte_length: u32 = readOffsetInt(u32, base64_decoded_key, &byte_offset, .{});
-        const exponent: u64 = readOffsetInt(u64, base64_decoded_key, &byte_offset, .{ .length = exponent_byte_length });
+        const exponent: BigIntManaged = try readOffsetBigInt(allocator, base64_decoded_key, &byte_offset, exponent_byte_length);
 
         // Get the modulus
         const modulus_byte_length: u32 = readOffsetInt(u32, base64_decoded_key, &byte_offset, .{});
@@ -551,12 +551,15 @@ pub fn encrypt(allocator: Allocator, public_key: PublicKey, message: []const u8)
     var cipher_text_int = try plain_text_int.clone();
     defer cipher_text_int.deinit();
 
+    // Create copies of the modulus and exponent from the public key
     var modulus = try public_key.modulus.clone();
     defer modulus.deinit();
+    var exponent = try public_key.exponent.clone();
+    defer exponent.deinit();
 
     // Calculate the cipher text
     std.debug.print("{s}\n", .{try cipher_text_int.toString(allocator, 10, std.fmt.Case.lower)});
-    try bigIntPowerModulo(&plain_text_int, public_key.exponent, &modulus, &cipher_text_int);
+    try bigIntPowerModulo(&plain_text_int, &exponent, &modulus, &cipher_text_int);
     std.debug.print("\n\nhi\n\n", .{});
     std.debug.print("{s}\n", .{try cipher_text_int.toString(allocator, 10, std.fmt.Case.lower)});
 
@@ -645,8 +648,8 @@ pub fn main() !void {
             //"AAAAB3NzaC1yc2EAAAADAQABAAACAQDH+UiVUz6XFRW2jqgxcEU91V7RN+UzMIkU3ZfMHYaESAizcw0iR8jFZ7/CgwEvu6AI3VPhB/53N4LmOFsO1nu0YXjfCFSFvrYHmGIcY1LMgV6XebzherHeFDr7DvbPfrpEEbmdxtJBNtaXKGYouVCWgIK9FjuitT4s21sg+awcEme9eDy0idxzQknrSesepx6+/7odxFyv9st1oLO+HGf8JuoDYjdlhG3cu4nZIXF/ziR5FlJQrz8rCIA0gNvWWKeUs+3xXPjlEsodrNYxeZtXFwKj0B/29GeB0y8LFKGElIQx2NBHJ4p1FE551j16/tanEc+HNzGjku7FYqNcxnd4DksYxNsZJg6yd+2UESWzz+MGlaKHJh0/7QPJUMmeXd7QIS03FYatseByFzl0K22NoKxBi6cBSCvxS8X4lse5ldWY4+8il86S0cG9jlayfGo7yznpJE2ZbcWmkp3M9/JPdQYZXAt+jijXNTDOVjDWm0Y88jqgcZXO4eJTSzNwfymFl6R9Te7oQYeb7gS+hH+JWBvOfZ1/NZOJP+ngtyaV3vYqiHeR19fHnRKC3/ujf5D4Z3mZsdZ2BRQrg+JKMZcvK8kGgaHfiFN9wFEchwDF10Eqv4qESH5f3JG/N8pCHOAVt+FPqUZRCakO7GbQ/XlSFwOCo5NzZDCqwYntdUDCmQ==",
             // "AAAAB3NzaC1yc2EAAAADAQABAAAAgQCnMq4mGjCKoUb2uvmmxOgIg3Zn8Tlw/FXbdelDN7nwNbJw8sW9cprdoI2JTCm+O9GIv+StQB1hWwAIpxcpTIA6cueKAqu1vWj8cild2GECFAryinuKSByqB/fdsBhS2oESeZogPkFMpR45MVZ9fQjA4KBgvXEwc+sgY4Vs0IqNqQ==",
             //"AAAAB3NzaC1yc2EAAAADAQABAAAAgQDNI+SAe/DfHo/hPMDb1wf5hTGtGscD0MLmekEx7bJEulJE4TXIlOySI41b2Q+MYJhkXzVibpVGHgWG5Ji801E4LWLJo+vwt7T0raWK1z6ww5PCclgOtJPsGKXZdyPyIrpaj6RxXcJ2ccc8SgqI7lOW/P15RjsINQ8FZYPFaYDCcw==",
-            //"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQClQurvmbQ3iODS/RetvLU29ErkfwpiqlOmkYxRi8bKqTTyx/Lmgv929Y6E/vJnkiIJ1nYCzpME/wKl0FQf7N4bcE+28yjB7SLZUFGUxLc8bE9FoRYPloMgwQVnVddDjb2tC8gThGP2ihRPgkpBDyKleGSDgv/gAoP/7GJQcp2/vw== Test Key",
-            "AAAAB3NzaC1yc2EAAAADAQABAAAAgQClQurvmbQ3iODS/RetvLU29ErkfwpiqlOmkYxRi8bKqTTyx/Lmgv929Y6E/vJnkiIJ1nYCzpME/wKl0FQf7N4bcE+28yjB7SLZUFGUxLc8bE9FoRYPloMgwQVnVddDjb2tC8gThGP2ihRPgkpBDyKleGSDgv/gAoP/7GJQcp2/vw==",
+            "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQClQurvmbQ3iODS/RetvLU29ErkfwpiqlOmkYxRi8bKqTTyx/Lmgv929Y6E/vJnkiIJ1nYCzpME/wKl0FQf7N4bcE+28yjB7SLZUFGUxLc8bE9FoRYPloMgwQVnVddDjb2tC8gThGP2ihRPgkpBDyKleGSDgv/gAoP/7GJQcp2/vw== Test Key",
+            // "AAAAB3NzaC1yc2EAAAADAQABAAAAgQClQurvmbQ3iODS/RetvLU29ErkfwpiqlOmkYxRi8bKqTTyx/Lmgv929Y6E/vJnkiIJ1nYCzpME/wKl0FQf7N4bcE+28yjB7SLZUFGUxLc8bE9FoRYPloMgwQVnVddDjb2tC8gThGP2ihRPgkpBDyKleGSDgv/gAoP/7GJQcp2/vw==",
         )
     else
         PublicKey{
