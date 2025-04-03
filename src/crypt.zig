@@ -347,11 +347,11 @@ fn bigIntModulo(dividend: *BigIntManaged, modulus: *BigIntManaged, residue: *Big
     // try dividend.copy(residue.*.toConst());
     try residue.copy(dividend.toConst());
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
+    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    // const allocator = gpa.allocator();
 
-    std.debug.print("Dividend: {s}\n", .{try dividend.toString(allocator, 10, std.fmt.Case.lower)});
-    std.debug.print("Modulus: {s}\n", .{try modulus.toString(allocator, 10, std.fmt.Case.lower)});
+    // std.debug.print("Dividend: {s}\n", .{try dividend.toString(allocator, 10, std.fmt.Case.lower)});
+    // std.debug.print("Modulus: {s}\n", .{try modulus.toString(allocator, 10, std.fmt.Case.lower)});
 
     // Create quotient output
     var q = try dividend.clone();
@@ -360,7 +360,7 @@ fn bigIntModulo(dividend: *BigIntManaged, modulus: *BigIntManaged, residue: *Big
     // Calculate the residue
     try q.divFloor(residue, dividend, modulus);
 
-    std.debug.print("Residue: {s}\n\n", .{try residue.toString(allocator, 10, std.fmt.Case.lower)});
+    // std.debug.print("Residue: {s}\n\n", .{try residue.toString(allocator, 10, std.fmt.Case.lower)});
 
     // // Insure the residue is positive
     // while (!residue.*.isPositive()) {
@@ -390,13 +390,13 @@ fn bigIntPowerModulo(dividend: *BigIntManaged, exponent: anytype, modulus: *BigI
         // *BigIntManaged, *const BigIntManaged => try @constCast(exponent).copy(local_exponent.toConst()),
         *BigIntManaged, *const BigIntManaged => try local_exponent.copy(exponent.toConst()),
         else => {
-            std.debug.print("{any}", .{@TypeOf(exponent)});
+            // std.debug.print("{any}", .{@TypeOf(exponent)});
             return error.UnallowedType;
         },
     }
     // try local_exponent.set(257);
 
-    std.debug.print("Exponent: {s}\n", .{try local_exponent.toString(allocator, 10, std.fmt.Case.lower)});
+    // std.debug.print("Exponent: {s}\n", .{try local_exponent.toString(allocator, 10, std.fmt.Case.lower)});
 
     // const local_exponent_ptr: *BigIntManaged = &local_exponent;
     // const local_exponent_const = try local_exponent.clone();
@@ -427,12 +427,12 @@ fn bigIntPowerModulo(dividend: *BigIntManaged, exponent: anytype, modulus: *BigI
         try residue.set(1);
     }
 
-    std.debug.print("Actual Dividend: {s}\n\n", .{try dividend.toString(allocator, 10, std.fmt.Case.lower)});
-    std.debug.print("Actual Residue: {s}\n\n", .{try residue.toString(allocator, 10, std.fmt.Case.lower)});
+    // std.debug.print("Actual Dividend: {s}\n\n", .{try dividend.toString(allocator, 10, std.fmt.Case.lower)});
+    // std.debug.print("Actual Residue: {s}\n\n", .{try residue.toString(allocator, 10, std.fmt.Case.lower)});
     const required_bits: usize = local_exponent.bitCountTwosComp();
 
     // For the rest of the bits of the exponent
-    std.debug.print("{d}\n", .{required_bits});
+    // std.debug.print("{d}\n", .{required_bits});
     for (1..required_bits) |_| {
 
         // Shift the bit mask to the next bit
@@ -445,14 +445,14 @@ fn bigIntPowerModulo(dividend: *BigIntManaged, exponent: anytype, modulus: *BigI
         // Get the new value for x
         try x.pow(&x, 2); // Raise x to the power of 2 to match moving to the next exponent bit
         try bigIntModulo(&x, modulus, &x); // Get the residue of x from the modulus
-        std.debug.print("Residue x: {s}\n\n", .{try x.toString(allocator, 10, std.fmt.Case.lower)});
+        // std.debug.print("Residue x: {s}\n\n", .{try x.toString(allocator, 10, std.fmt.Case.lower)});
 
         // If the bit is populated, then multiply the current residue
         // value by the current binary exponential component
         if (exponent_bit_is_populated) {
             try residue.mul(residue, &x);
             try bigIntModulo(residue, modulus, residue); // Get the residue of x from the modulus
-            std.debug.print("Actual Residue: {s}\n\n", .{try residue.toString(allocator, 10, std.fmt.Case.lower)});
+            // std.debug.print("Actual Residue: {s}\n\n", .{try residue.toString(allocator, 10, std.fmt.Case.lower)});
         }
     }
 
@@ -544,7 +544,10 @@ fn bigIntPowerModulo(dividend: *BigIntManaged, exponent: anytype, modulus: *BigI
 pub fn encrypt(allocator: Allocator, public_key: PublicKey, message: []const u8) ![]u8 {
 
     // Create a big int for the cipher text
-    var plain_text_int = try readOffsetBigInt(allocator, message, 0, std.math.maxInt(usize));
+    // var plain_text_int = try readOffsetBigInt(allocator, message, 0, std.math.maxInt(usize));
+
+    // Convert the plain text into an integer
+    var plain_text_int = try charsToBigInt(allocator, message);
     defer plain_text_int.deinit();
 
     // Clone the plain text into the initial form of the cipher text
@@ -558,23 +561,31 @@ pub fn encrypt(allocator: Allocator, public_key: PublicKey, message: []const u8)
     defer exponent.deinit();
 
     // Calculate the cipher text
-    std.debug.print("{s}\n", .{try cipher_text_int.toString(allocator, 10, std.fmt.Case.lower)});
+    // std.debug.print("{s}\n", .{try cipher_text_int.toString(allocator, 10, std.fmt.Case.lower)});
     try bigIntPowerModulo(&plain_text_int, &exponent, &modulus, &cipher_text_int);
-    std.debug.print("\n\nhi\n\n", .{});
-    std.debug.print("{s}\n", .{try cipher_text_int.toString(allocator, 10, std.fmt.Case.lower)});
+    // std.debug.print("\n\nhi\n\n", .{});
+    // std.debug.print("{s}\n", .{try cipher_text_int.toString(allocator, 10, std.fmt.Case.lower)});
 
-    // Convert the cipher text back to a base 16 string
-    return try cipher_text_int.toString(allocator, 16, std.fmt.Case.lower);
+    // // Convert the cipher text back to a base 16 string
+    // return try cipher_text_int.toString(allocator, 16, std.fmt.Case.lower);
+
+    // Convert the residue integer to a string
+    return try bigIntToChars(allocator, cipher_text_int);
 }
 
 pub fn decrypt(allocator: Allocator, private_key: PrivateKey, cipher_text: []const u8) ![]u8 {
 
-    // Get the cipher text int from the cipher text
-    // var cipher_text_int = try readOffsetBigInt(allocator, cipher_text, 0, std.math.maxInt(usize));
-    var cipher_text_int = try BigIntManaged.init(allocator);
+    // // Get the cipher text int from the cipher text
+    // // var cipher_text_int = try readOffsetBigInt(allocator, cipher_text, 0, std.math.maxInt(usize));
+    // var cipher_text_int = try BigIntManaged.init(allocator);
+    // defer cipher_text_int.deinit();
+    // try cipher_text_int.setString(16, cipher_text);
+    // // std.debug.print("{s}\n", .{cipher_text});
+    // //
+
+    // Convert the cipher text into an integer
+    var cipher_text_int = try charsToBigInt(allocator, cipher_text);
     defer cipher_text_int.deinit();
-    try cipher_text_int.setString(16, cipher_text);
-    std.debug.print("{s}\n", .{cipher_text});
 
     // Clone the cipher text into the initial form of the plain text
     var plain_text_int = try cipher_text_int.clone();
@@ -585,16 +596,16 @@ pub fn decrypt(allocator: Allocator, private_key: PrivateKey, cipher_text: []con
 
     // Calculate the cipher text
     try bigIntPowerModulo(&cipher_text_int, &private_key.private_exponent, &modulus, &plain_text_int);
-    std.debug.print("Decrypted Residue: {s}\n\n", .{try plain_text_int.toString(allocator, 10, std.fmt.Case.lower)});
-    std.debug.print("Decrypted Residue: {b}\n\n", .{try plain_text_int.toString(allocator, 10, std.fmt.Case.lower)});
-    std.debug.print("Decrypted Residue: {s}\n\n", .{try plain_text_int.toString(allocator, 16, std.fmt.Case.lower)});
-    std.debug.print("Decrypted Residue: {b}\n\n", .{try plain_text_int.toString(allocator, 16, std.fmt.Case.lower)});
-    std.debug.print("Decrypted Residue: {s}\n\n", .{try plain_text_int.toString(allocator, 8, std.fmt.Case.lower)});
-    std.debug.print("Decrypted Residue: {b}\n\n", .{try plain_text_int.toString(allocator, 8, std.fmt.Case.lower)});
-    std.debug.print("Decrypted Residue: {s}\n\n", .{try plain_text_int.toString(allocator, 4, std.fmt.Case.lower)});
-    std.debug.print("Decrypted Residue: {b}\n\n", .{try plain_text_int.toString(allocator, 4, std.fmt.Case.lower)});
-    std.debug.print("Decrypted Residue: {s}\n\n", .{try plain_text_int.toString(allocator, 2, std.fmt.Case.lower)});
-    std.debug.print("Decrypted Residue: {b}\n\n", .{try plain_text_int.toString(allocator, 2, std.fmt.Case.lower)});
+    // std.debug.print("Decrypted Residue: {s}\n\n", .{try plain_text_int.toString(allocator, 10, std.fmt.Case.lower)});
+    // std.debug.print("Decrypted Residue: {b}\n\n", .{try plain_text_int.toString(allocator, 10, std.fmt.Case.lower)});
+    // std.debug.print("Decrypted Residue: {s}\n\n", .{try plain_text_int.toString(allocator, 16, std.fmt.Case.lower)});
+    // std.debug.print("Decrypted Residue: {b}\n\n", .{try plain_text_int.toString(allocator, 16, std.fmt.Case.lower)});
+    // std.debug.print("Decrypted Residue: {s}\n\n", .{try plain_text_int.toString(allocator, 8, std.fmt.Case.lower)});
+    // std.debug.print("Decrypted Residue: {b}\n\n", .{try plain_text_int.toString(allocator, 8, std.fmt.Case.lower)});
+    // std.debug.print("Decrypted Residue: {s}\n\n", .{try plain_text_int.toString(allocator, 4, std.fmt.Case.lower)});
+    // std.debug.print("Decrypted Residue: {b}\n\n", .{try plain_text_int.toString(allocator, 4, std.fmt.Case.lower)});
+    // std.debug.print("Decrypted Residue: {s}\n\n", .{try plain_text_int.toString(allocator, 2, std.fmt.Case.lower)});
+    // std.debug.print("Decrypted Residue: {b}\n\n", .{try plain_text_int.toString(allocator, 2, std.fmt.Case.lower)});
 
     // const hex_plain_text: []u8 = try plain_text_int.toString(allocator, 16, std.fmt.Case.lower);
     // defer allocator.free(hex_plain_text);
@@ -614,25 +625,76 @@ pub fn decrypt(allocator: Allocator, private_key: PrivateKey, cipher_text: []con
     //
 
     // Convert the residue integer to a string
-    var bit_mask: BigIntManaged = try BigIntManaged.initSet(allocator, std.math.maxInt(u8));
-    defer bit_mask.deinit();
-    std.debug.print("plain text int bit count: {d}\n", .{plain_text_int.bitCountTwosComp()});
+    // var bit_mask: BigIntManaged = try BigIntManaged.initSet(allocator, std.math.maxInt(u8));
+    // defer bit_mask.deinit();
+    // // std.debug.print("plain text int bit count: {d}\n", .{plain_text_int.bitCountTwosComp()});
+    //
+    // var plain_text: []u8 = try allocator.alloc(u8, try std.math.divCeil(usize, plain_text_int.bitCountTwosComp(), 8));
+    //
+    // var buffer: BigIntManaged = try BigIntManaged.init(allocator);
+    //
+    // // std.debug.print("Plain text len: {d}\n", .{plain_text.len});
+    //
+    // for (0..plain_text.len) |i| {
+    //     // std.debug.print("Bit Mask: {s}\n\n", .{try bit_mask.toString(allocator, 2, std.fmt.Case.lower)});
+    //     try buffer.bitAnd(&plain_text_int, &bit_mask);
+    //     // std.debug.print("{s}\n\n", .{try buffer.toString(allocator, 2, std.fmt.Case.lower)});
+    //     plain_text[plain_text.len - 1 - i] = try buffer.to(u8);
+    //     try plain_text_int.shiftRight(&plain_text_int, 8);
+    // }
 
-    var plain_text: []u8 = try allocator.alloc(u8, try std.math.divCeil(usize, plain_text_int.bitCountTwosComp(), 8));
-
-    var buffer: BigIntManaged = try BigIntManaged.init(allocator);
-
-    std.debug.print("Plain text len: {d}\n", .{plain_text.len});
-
-    for (0..plain_text.len) |i| {
-        std.debug.print("Bit Mask: {s}\n\n", .{try bit_mask.toString(allocator, 2, std.fmt.Case.lower)});
-        try buffer.bitAnd(&plain_text_int, &bit_mask);
-        std.debug.print("{s}\n\n", .{try buffer.toString(allocator, 2, std.fmt.Case.lower)});
-        plain_text[plain_text.len - 1 - i] = try buffer.to(u8);
-        try plain_text_int.shiftRight(&plain_text_int, 8);
-    }
+    // Convert the residue integer to a string
+    const plain_text: []u8 = try bigIntToChars(allocator, plain_text_int);
 
     return plain_text;
+}
+
+/// Converts the value from a big int into its UTF-8 string representation.
+/// Assumes that the big int is just a concatenation of bytes each representing
+/// a UTF-8 character.
+/// The original *big_int* is not modified.
+/// The caller owns the resulting byte array.
+fn bigIntToChars(allocator: Allocator, big_int: BigIntManaged) ![]u8 {
+    // Create a copy of the big int
+    var big_int_copy: BigIntManaged = try big_int.clone();
+    defer big_int_copy.deinit();
+
+    // Create a bit mask to get each UTF-8 character from the big int
+    var bit_mask: BigIntManaged = try BigIntManaged.initSet(allocator, maxInt(u8));
+    defer bit_mask.deinit();
+
+    // Create a buffer big int
+    var buffer: BigIntManaged = try BigIntManaged.init(allocator);
+    defer buffer.deinit();
+
+    // Get the number of bytes required to represent the big int
+    const byte_count: usize = try std.math.divCeil(usize, big_int_copy.bitCountTwosComp(), 8);
+
+    // Create the slice that will be returned
+    var return_string: []u8 = try allocator.alloc(u8, byte_count);
+
+    // Transfer each byte from the big int copy to the return string starting
+    // from the lowest order byte.
+    for (0..return_string.len) |i| {
+        // Isolate the lowest byte of the big int copy
+        try buffer.bitAnd(&big_int_copy, &bit_mask);
+
+        // Transfer the least order byte to the return string
+        return_string[return_string.len - 1 - i] = try buffer.to(u8);
+
+        // Shift the big int copy 1 byte to the right to move the next byte
+        // into the lowest position.
+        try big_int_copy.shiftRight(&big_int_copy, 8);
+    }
+
+    // Return the transferred string
+    return return_string;
+}
+
+/// Converts a slice of UTF-8 characters to a big int by concatenating the
+/// binary values into one single big int.
+fn charsToBigInt(allocator: Allocator, chars: []const u8) !BigIntManaged {
+    return try readOffsetBigInt(allocator, chars, 0, maxInt(usize));
 }
 
 pub fn main() !void {
@@ -714,19 +776,19 @@ pub fn main() !void {
         };
     defer private_key.deinit();
 
-    const plain_text: []const u8 = "M";
+    const plain_text: []const u8 = "Hello world";
 
     std.debug.print("Plain text: {s}\n", .{plain_text});
-    std.debug.print("Plain text binary: {b}\n\n\n", .{plain_text});
+    // std.debug.print("Plain text binary: {b}\n\n\n", .{plain_text});
 
     const cipher_text: []u8 = try encrypt(allocator, pubkey, plain_text);
     defer allocator.free(cipher_text);
 
-    std.debug.print("Cipher text: {s}\n\n\n", .{cipher_text});
+    std.debug.print("Cipher text (do not copy):\n{s}\n\n\n", .{cipher_text});
 
     const decrypted_plain_text: []u8 = try decrypt(allocator, private_key, cipher_text);
     defer allocator.free(decrypted_plain_text);
 
-    std.debug.print("Decrypted cipher text / Plain text: {b}\n\n\n", .{decrypted_plain_text});
+    // std.debug.print("Decrypted cipher text / Plain text: {b}\n\n\n", .{decrypted_plain_text});
     std.debug.print("Decrypted cipher text / Plain text: {s}\n\n\n", .{decrypted_plain_text});
 }
