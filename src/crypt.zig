@@ -8,6 +8,8 @@ const Base64Decoder = std.base64.standard.Decoder;
 const BigIntManaged = std.math.big.int.Managed;
 const der = std.crypto.Certificate.der;
 const maxInt = std.math.maxInt;
+const startsWith = std.mem.startsWith;
+const endsWith = std.mem.endsWith;
 
 /// RSA Public Key
 pub const PublicKey = struct {
@@ -65,7 +67,7 @@ pub const PublicKey = struct {
     }
 };
 
-/// RSA Private Key
+/// RSA Private Key following the *RFC 8017* standard.
 pub const PrivateKey = struct {
     version: u64,
     modulus: BigIntManaged,
@@ -77,22 +79,49 @@ pub const PrivateKey = struct {
     exponent2: BigIntManaged,
     coefficient: BigIntManaged,
 
-    /// Parses a base 64 private key string encoded using the RFC 8017 standard
+    /// Parses a base 64 private key string encoded using the ***RFC 8017*** standard.
+    ///
+    /// Simply, the input string must uphold the following:
+    ///   - Start with *"-----BEGIN RSA PRIVATE KEY-----"* at the first line.
+    ///   - End with *"-----END RSA PRIVATE KEY-----"* on the last line.
+    ///   - In between is the base 64 encoded private key following the *RFC 8017*
+    ///     standard and is encoded using *PEM*.
+    ///   - The base 64 key can span multiple lines or be on a single line but
+    ///     all lines must be deliminated using the *"\n"* character.
     pub fn parse(allocator: Allocator, input: []const u8) !PrivateKey {
-        // Decode the input
-        const base64_decoded = try allocator.alloc(u8, try Base64Decoder.calcSizeForSlice(input));
-        defer allocator.free(base64_decoded);
-        try Base64Decoder.decode(base64_decoded, input);
+        // Define the expected prefix and suffix of the input key
+        const key_prefix: []const u8 = "-----BEGIN RSA PRIVATE KEY-----\n";
+        const key_suffix: []const u8 = "\n-----END RSA PRIVATE KEY-----";
 
-        // Get the first element of the der encoded bytes which should be an
-        // der element with a sequence tag
-        const der_sequence_element = try der.Element.parse(base64_decoded, 0);
+        // --- Check that the input is of the correct format ---
+        if (!startsWith(u8, input, key_prefix)) return error.InvalidKeyFormat; // Check prefix
+        if (!endsWith(u8, input, key_suffix)) return error.InvalidKeyFormat; // Check suffix
+
+        // --- Clean up the input key ---
+        // Remove the wrapper from the input
+        const unwrapped_input: []const u8 = input[key_prefix.len .. input.len - key_suffix.len];
+        const input_key: []u8 = try allocator.alloc(u8, std.mem.replacementSize(u8, unwrapped_input, "\n", ""));
+        _ = std.mem.replace(u8, unwrapped_input, "\n", "", input_key);
+
+        // --- Decode the input key ---
+        // -- Decode from base 64 --
+        const base64_decoded_key = try allocator.alloc(
+            u8,
+            Base64Decoder.calcSizeForSlice(input_key) catch return error.InvalidKey,
+        );
+        defer allocator.free(base64_decoded_key);
+        Base64Decoder.decode(base64_decoded_key, input_key) catch return error.InvalidKey;
+
+        // -- Decode from DER --
+        // Get the first element of the DER encoded bytes which should be an
+        // DER element with a sequence tag
+        const der_sequence_element = try der.Element.parse(base64_decoded_key, 0);
 
         // Get the elements of the sequence
-        var der_sequence: DerSequence = try DerSequence.init(allocator, der_sequence_element, base64_decoded);
+        var der_sequence: DerSequence = try DerSequence.init(allocator, der_sequence_element, base64_decoded_key);
         defer der_sequence.deinit();
 
-        // Initialize the private key
+        // --- Create and return the private key ---
         return PrivateKey{
             .version = readOffsetInt(u64, der_sequence.getElementSlice(0), 0, .{}),
             .modulus = try readOffsetBigInt(allocator, der_sequence.getElementSlice(1), 0, maxInt(usize)),
@@ -589,14 +618,16 @@ pub fn main() !void {
     // defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const small_test: bool = true;
+    const small_test: bool = false;
 
     var pubkey = if (!small_test)
         try PublicKey.parse(
             allocator,
             //"AAAAB3NzaC1yc2EAAAADAQABAAACAQDH+UiVUz6XFRW2jqgxcEU91V7RN+UzMIkU3ZfMHYaESAizcw0iR8jFZ7/CgwEvu6AI3VPhB/53N4LmOFsO1nu0YXjfCFSFvrYHmGIcY1LMgV6XebzherHeFDr7DvbPfrpEEbmdxtJBNtaXKGYouVCWgIK9FjuitT4s21sg+awcEme9eDy0idxzQknrSesepx6+/7odxFyv9st1oLO+HGf8JuoDYjdlhG3cu4nZIXF/ziR5FlJQrz8rCIA0gNvWWKeUs+3xXPjlEsodrNYxeZtXFwKj0B/29GeB0y8LFKGElIQx2NBHJ4p1FE551j16/tanEc+HNzGjku7FYqNcxnd4DksYxNsZJg6yd+2UESWzz+MGlaKHJh0/7QPJUMmeXd7QIS03FYatseByFzl0K22NoKxBi6cBSCvxS8X4lse5ldWY4+8il86S0cG9jlayfGo7yznpJE2ZbcWmkp3M9/JPdQYZXAt+jijXNTDOVjDWm0Y88jqgcZXO4eJTSzNwfymFl6R9Te7oQYeb7gS+hH+JWBvOfZ1/NZOJP+ngtyaV3vYqiHeR19fHnRKC3/ujf5D4Z3mZsdZ2BRQrg+JKMZcvK8kGgaHfiFN9wFEchwDF10Eqv4qESH5f3JG/N8pCHOAVt+FPqUZRCakO7GbQ/XlSFwOCo5NzZDCqwYntdUDCmQ==",
             // "AAAAB3NzaC1yc2EAAAADAQABAAAAgQCnMq4mGjCKoUb2uvmmxOgIg3Zn8Tlw/FXbdelDN7nwNbJw8sW9cprdoI2JTCm+O9GIv+StQB1hWwAIpxcpTIA6cueKAqu1vWj8cild2GECFAryinuKSByqB/fdsBhS2oESeZogPkFMpR45MVZ9fQjA4KBgvXEwc+sgY4Vs0IqNqQ==",
-            "AAAAB3NzaC1yc2EAAAADAQABAAAAgQDNI+SAe/DfHo/hPMDb1wf5hTGtGscD0MLmekEx7bJEulJE4TXIlOySI41b2Q+MYJhkXzVibpVGHgWG5Ji801E4LWLJo+vwt7T0raWK1z6ww5PCclgOtJPsGKXZdyPyIrpaj6RxXcJ2ccc8SgqI7lOW/P15RjsINQ8FZYPFaYDCcw==",
+            //"AAAAB3NzaC1yc2EAAAADAQABAAAAgQDNI+SAe/DfHo/hPMDb1wf5hTGtGscD0MLmekEx7bJEulJE4TXIlOySI41b2Q+MYJhkXzVibpVGHgWG5Ji801E4LWLJo+vwt7T0raWK1z6ww5PCclgOtJPsGKXZdyPyIrpaj6RxXcJ2ccc8SgqI7lOW/P15RjsINQ8FZYPFaYDCcw==",
+            //"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQClQurvmbQ3iODS/RetvLU29ErkfwpiqlOmkYxRi8bKqTTyx/Lmgv929Y6E/vJnkiIJ1nYCzpME/wKl0FQf7N4bcE+28yjB7SLZUFGUxLc8bE9FoRYPloMgwQVnVddDjb2tC8gThGP2ihRPgkpBDyKleGSDgv/gAoP/7GJQcp2/vw== Test Key",
+            "AAAAB3NzaC1yc2EAAAADAQABAAAAgQClQurvmbQ3iODS/RetvLU29ErkfwpiqlOmkYxRi8bKqTTyx/Lmgv929Y6E/vJnkiIJ1nYCzpME/wKl0FQf7N4bcE+28yjB7SLZUFGUxLc8bE9FoRYPloMgwQVnVddDjb2tC8gThGP2ihRPgkpBDyKleGSDgv/gAoP/7GJQcp2/vw==",
         )
     else
         PublicKey{
@@ -629,7 +660,23 @@ pub fn main() !void {
             //"MIIEugIBADANBgkqhkiG9w0BAQEFAASCBKQwggSgAgEAAoIBAQDBgk/A/EEizHPP4SQIXywFFpgWuKQVnuh6rBu2asWoc44EhBFo2ST3LAuifKp6eAvsB460OIexGukdjnaUOIhxLLxj1YCzlN18p9H62gALvvI4cEL7dI1ELsaBaHEQyx07g3YWIJbSO9Zzi3sivzAynmg19mntOa8GnSwBoKJ+5aVzphk/BJLwVcicoKpjPbM2SGkEBBrDKnMhFgcfawwfieeFxb8YBB2sCWZ5XnavPlR94CnbPlyPoefbAzWk2mfE79tvCGCXlmtmiUPuQVG/dLn/MPGJ1rSmYH/qJ/gAwYdUuLZlL4C0kycWVP+fpv9A0a0t8X+Hf2leQhMW5sSRAgMBAAECggEAA3D7VR3HVMSZDKne161FnaOMud63wFCuprvX1FMqx7eiX28v1hMChsjIPjAEYiAvaheqUIcu1pX5blahwjoNJyIaCZZ67vanR7e+Ur08wfi32wwYDNvCRWOlkRiX5ioOj4fjejpDJGL/CdgBrRkEVOofRVJoCNl9RNtXtIG0Uhhgdt81ykGQKguPvDKs94xrL1zX0fVDjGqxSVgBWXwwC5yKnIrXBWnaHLN4yPvYM+2FxaeVCpzP4SMvnVZ6425ovRK915GhiaPHqPG/YEGe19ohgPdhhX7crTgW2pyTx1ST1Mmko0DZ3jTU11aD+w/D0H+v8A/5O7JD48qqdExkYQKBgQD23kgOq4I9pktrO4tr8eHVzeMh3mDw0oRdvKgaufjQeaGFKcOuLHMvaYjqMWTIfChKg0Z5tIjNCwB6c2kWVmDs6vxfxVFdl40fvVRTlBXB5rm3EWj5i3Ik5se8n/hW4hXq20mjmBaaVWHnAXGyFxmJpAsJo+Q8hjN7flaVYIJjaQKBgQDIqr6mpMijWbIdS3ecLvC8LdpriuBxua8LY+0OqdvEbFdB8WEo6n7p9wjHvXVpR6765OMeCtiYpQOqIdfLM2R3V0PIeL0/kEaC9osUl+Rfv+p8s9G+6Y1EuIJz18OyRcyh/sQX/FL4XtGxYgQR/eaN01uvIDNqZQRqLt8G5AC66QJ/QZLJkRv9fGKvpcwrPIEDe8c0jcqD9XP1tPBntrGvZbDpNnXhhGJKNk3SEGMOYjKYgTJdhfZuYAiMF/qP718CX+wLHWVMN5AJ7GReAdVT8i1XJ0l4mNBxgVvLsk7LqEhlify1kr7TQitr1fCMQsHgBq+MPwNJnMoI4sSsOwFnoQKBgDOW+jb7rH2apNk1OsYTp16p5zq41KVIWMFz6lFXyCGCvRg+B32uc/yQv1gi1FnBzTHBwMZLgY4U9pE57DHYv56S9+FFcVozLH2lBvK/bj5Tp+Rxkp4ji2c8jIVd1nkxyr9nMWD9RROHxR92lJdPkIOr8Clg/PcAi5cE/9/UpH9pAoGAeYCqvshITsEkW2DR6aNgWwTXkknumS+XqD9172GdUncjP2SrL6dHBfLSdGHXB/ogjdXtu3FElYGpl79amObJ9XAWb4pVQ9BypE8vTirZwYiLr/KO5/roLC/U/EmrfTxp9sJWtAunjZQxfSJMZtaq9CIbbdY4hqfFzZJjsjk0MEM=",
             // "MIIEoAIBAAKCAQEAwYJPwPxBIsxzz+EkCF8sBRaYFrikFZ7oeqwbtmrFqHOOBIQRaNkk9ywLonyqengL7AeOtDiHsRrpHY52lDiIcSy8Y9WAs5TdfKfR+toAC77yOHBC+3SNRC7GgWhxEMsdO4N2FiCW0jvWc4t7Ir8wMp5oNfZp7TmvBp0sAaCifuWlc6YZPwSS8FXInKCqYz2zNkhpBAQawypzIRYHH2sMH4nnhcW/GAQdrAlmeV52rz5UfeAp2z5cj6Hn2wM1pNpnxO/bbwhgl5ZrZolD7kFRv3S5/zDxida0pmB/6if4AMGHVLi2ZS+AtJMnFlT/n6b/QNGtLfF/h39pXkITFubEkQIDAQABAoIBAANw+1Udx1TEmQyp3tetRZ2jjLnet8BQrqa719RTKse3ol9vL9YTAobIyD4wBGIgL2oXqlCHLtaV+W5WocI6DSciGgmWeu72p0e3vlK9PMH4t9sMGAzbwkVjpZEYl+YqDo+H43o6QyRi/wnYAa0ZBFTqH0VSaAjZfUTbV7SBtFIYYHbfNcpBkCoLj7wyrPeMay9c19H1Q4xqsUlYAVl8MAucipyK1wVp2hyzeMj72DPthcWnlQqcz+EjL51WeuNuaL0SvdeRoYmjx6jxv2BBntfaIYD3YYV+3K04Ftqck8dUk9TJpKNA2d401NdWg/sPw9B/r/AP+TuyQ+PKqnRMZGECgYEA9t5IDquCPaZLazuLa/Hh1c3jId5g8NKEXbyoGrn40HmhhSnDrixzL2mI6jFkyHwoSoNGebSIzQsAenNpFlZg7Or8X8VRXZeNH71UU5QVwea5txFo+YtyJObHvJ/4VuIV6ttJo5gWmlVh5wFxshcZiaQLCaPkPIYze35WlWCCY2kCgYEAyKq+pqTIo1myHUt3nC7wvC3aa4rgcbmvC2PtDqnbxGxXQfFhKOp+6fcIx711aUeu+uTjHgrYmKUDqiHXyzNkd1dDyHi9P5BGgvaLFJfkX7/qfLPRvumNRLiCc9fDskXMof7EF/xS+F7RsWIEEf3mjdNbryAzamUEai7fBuQAuukCf0GSyZEb/Xxir6XMKzyBA3vHNI3Kg/Vz9bTwZ7axr2Ww6TZ14YRiSjZN0hBjDmIymIEyXYX2bmAIjBf6j+9fAl/sCx1lTDeQCexkXgHVU/ItVydJeJjQcYFby7JOy6hIZYn8tZK+00Ira9XwjELB4AavjD8DSZzKCOLErDsBZ6ECgYAzlvo2+6x9mqTZNTrGE6deqec6uNSlSFjBc+pRV8ghgr0YPgd9rnP8kL9YItRZwc0xwcDGS4GOFPaROewx2L+ekvfhRXFaMyx9pQbyv24+U6fkcZKeI4tnPIyFXdZ5Mcq/ZzFg/UUTh8UfdpSXT5CDq/ApYPz3AIuXBP/f1KR/aQKBgHmAqr7ISE7BJFtg0emjYFsE15JJ7pkvl6g/de9hnVJ3Iz9kqy+nRwXy0nRh1wf6II3V7btxRJWBqZe/WpjmyfVwFm+KVUPQcqRPL04q2cGIi6/yjuf66Cwv1PxJq308afbCVrQLp42UMX0iTGbWqvQiG23WOIanxc2SY7I5NDBD",
             // "b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAlwAAAAdzc2gtcnNhAAAAAwEAAQAAAIEAzSPkgHvw3x6P4TzA29cH+YUxrRrHA9DC5npBMe2yRLpSROE1yJTskiONW9kPjGCYZF81Ym6VRh4FhuSYvNNROC1iyaPr8Le09K2litc+sMOTwnJYDrST7Bil2Xcj8iK6Wo+kcV3CdnHHPEoKiO5Tlvz9eUY7CDUPBWWDxWmAwnMAAAIIZbJ/wWWyf8EAAAAHc3NoLXJzYQAAAIEAzSPkgHvw3x6P4TzA29cH+YUxrRrHA9DC5npBMe2yRLpSROE1yJTskiONW9kPjGCYZF81Ym6VRh4FhuSYvNNROC1iyaPr8Le09K2litc+sMOTwnJYDrST7Bil2Xcj8iK6Wo+kcV3CdnHHPEoKiO5Tlvz9eUY7CDUPBWWDxWmAwnMAAAADAQABAAAAgFowVoy6cOrXV/BxsmS0xDfKfE2bwTWHObj0tOcLlt2qgPLxhKDcAKo7YTGpW7Ge4kD2rtTIw24hUtK8e/5AdasQblPGgQh4HyQn3Z36kbB2mGNac88nbw1jlwEPQ/28ZH4AoTmRrcsrDBoqNNDn6zquGnF2b1B8U6s4aID4YXw5AAAAQD3GIbCm7iBOSXFLegrw/wEezvH537loOP0aGsenowlQeJpmhyEkJBnYf416u2qnPiU/EEJ4I21PtcTAxBrXVpsAAABBAO90LhCcgugml5uO6OjGrepa+S78y5/JGigcUOSCTlnQsw98uAzZpcRNTmw7QX2b8AxGcNhbrTbXkgvsAp9MjeUAAABBANtQuLpsVzBA8nhGgXJeJZ8Um3+fBYiUAsYpaT4HdeHS6hUybavKJVoZIqqiCUi3anCxEO7fv0DQ97CGYPNayXcAAAAQaXNhYWNzdEBJc2FhY3NQQwECAw==",
-            "b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAlwAAAAdzc2gtcnNhAAAAAwEAAQAAAIEAzSPkgHvw3x6P4TzA29cH+YUxrRrHA9DC5npBMe2yRLpSROE1yJTskiONW9kPjGCYZF81Ym6VRh4FhuSYvNNROC1iyaPr8Le09K2litc+sMOTwnJYDrST7Bil2Xcj8iK6Wo+kcV3CdnHHPEoKiO5Tlvz9eUY7CDUPBWWDxWmAwnMAAAIIZbJ/wWWyf8EAAAAHc3NoLXJzYQAAAIEAzSPkgHvw3x6P4TzA29cH+YUxrRrHA9DC5npBMe2yRLpSROE1yJTskiONW9kPjGCYZF81Ym6VRh4FhuSYvNNROC1iyaPr8Le09K2litc+sMOTwnJYDrST7Bil2Xcj8iK6Wo+kcV3CdnHHPEoKiO5Tlvz9eUY7CDUPBWWDxWmAwnMAAAADAQABAAAAgFowVoy6cOrXV/BxsmS0xDfKfE2bwTWHObj0tOcLlt2qgPLxhKDcAKo7YTGpW7Ge4kD2rtTIw24hUtK8e/5AdasQblPGgQh4HyQn3Z36kbB2mGNac88nbw1jlwEPQ/28ZH4AoTmRrcsrDBoqNNDn6zquGnF2b1B8U6s4aID4YXw5AAAAQD3GIbCm7iBOSXFLegrw/wEezvH537loOP0aGsenowlQeJpmhyEkJBnYf416u2qnPiU/EEJ4I21PtcTAxBrXVpsAAABBAO90LhCcgugml5uO6OjGrepa+S78y5/JGigcUOSCTlnQsw98uAzZpcRNTmw7QX2b8AxGcNhbrTbXkgvsAp9MjeUAAABBANtQuLpsVzBA8nhGgXJeJZ8Um3+fBYiUAsYpaT4HdeHS6hUybavKJVoZIqqiCUi3anCxEO7fv0DQ97CGYPNayXcAAAAQaXNhYWNzdEBJc2FhY3NQQwECAw==",
+            // "b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAlwAAAAdzc2gtcnNhAAAAAwEAAQAAAIEAzSPkgHvw3x6P4TzA29cH+YUxrRrHA9DC5npBMe2yRLpSROE1yJTskiONW9kPjGCYZF81Ym6VRh4FhuSYvNNROC1iyaPr8Le09K2litc+sMOTwnJYDrST7Bil2Xcj8iK6Wo+kcV3CdnHHPEoKiO5Tlvz9eUY7CDUPBWWDxWmAwnMAAAIIZbJ/wWWyf8EAAAAHc3NoLXJzYQAAAIEAzSPkgHvw3x6P4TzA29cH+YUxrRrHA9DC5npBMe2yRLpSROE1yJTskiONW9kPjGCYZF81Ym6VRh4FhuSYvNNROC1iyaPr8Le09K2litc+sMOTwnJYDrST7Bil2Xcj8iK6Wo+kcV3CdnHHPEoKiO5Tlvz9eUY7CDUPBWWDxWmAwnMAAAADAQABAAAAgFowVoy6cOrXV/BxsmS0xDfKfE2bwTWHObj0tOcLlt2qgPLxhKDcAKo7YTGpW7Ge4kD2rtTIw24hUtK8e/5AdasQblPGgQh4HyQn3Z36kbB2mGNac88nbw1jlwEPQ/28ZH4AoTmRrcsrDBoqNNDn6zquGnF2b1B8U6s4aID4YXw5AAAAQD3GIbCm7iBOSXFLegrw/wEezvH537loOP0aGsenowlQeJpmhyEkJBnYf416u2qnPiU/EEJ4I21PtcTAxBrXVpsAAABBAO90LhCcgugml5uO6OjGrepa+S78y5/JGigcUOSCTlnQsw98uAzZpcRNTmw7QX2b8AxGcNhbrTbXkgvsAp9MjeUAAABBANtQuLpsVzBA8nhGgXJeJZ8Um3+fBYiUAsYpaT4HdeHS6hUybavKJVoZIqqiCUi3anCxEO7fv0DQ97CGYPNayXcAAAAQaXNhYWNzdEBJc2FhY3NQQwECAw==",
+            \\-----BEGIN RSA PRIVATE KEY-----
+            \\MIICXAIBAAKBgQClQurvmbQ3iODS/RetvLU29ErkfwpiqlOmkYxRi8bKqTTyx/Lm
+            \\gv929Y6E/vJnkiIJ1nYCzpME/wKl0FQf7N4bcE+28yjB7SLZUFGUxLc8bE9FoRYP
+            \\loMgwQVnVddDjb2tC8gThGP2ihRPgkpBDyKleGSDgv/gAoP/7GJQcp2/vwIDAQAB
+            \\AoGAaarP7UOqJ5gtqLqLWVs/w1OQT2mrikq+EdMelUV6Zjqq0FFozlsUXUvFROR+
+            \\uhqGCSRHcKQE/TzQxJTgNUmO+ZVL+HgjcqtHetuv5t5Yah7nzfrFN6nCUs68FV8u
+            \\O9lPZwRB2cHFodWA7xNe/7nfTSvnWtiLyPV6pm3d0I4DnQECQQDSeOftAJgDmchA
+            \\1GTinccW+jMuhhgY4NONCZrDYI34pLkH9JpqTGzZW1y9CUmgOgRn0JcXylIYFbVS
+            \\FC6kxoBnAkEAyQJq5+FUJZaErRbthgajnuyZa7NWHcfbhD2n2Rzo84zhIJt53JzX
+            \\0fCJ3IeFZ+B5HYzxNYFlotuZCrBHqGDO6QJAUZ39IhTm3g6Wbz1t2cshVzGzA0mQ
+            \\sqUMpFajIzygEVmfPwyFjM8SLr+VGOEvIekdqDxlOx6D8z8Hz0pwRAmN5QJAHq7z
+            \\yrmmsqYrUpCxaUgSKexL7xjNCHa9l44h1Q6IsMTMiMGy9G4ss6tYIAW/439sfYpK
+            \\N7Ss4xNKZUtLZPSCIQJBALoPx1Shp/P04//tY9ew7R5aoucaN/m9zcYXDvuB4D57
+            \\dN3JLHAMGlEhvtLpj1Ovx8EwKLyGvZFU3q35DQvy4a4=
+            \\-----END RSA PRIVATE KEY-----
+            ,
         )
     else
         PrivateKey{
