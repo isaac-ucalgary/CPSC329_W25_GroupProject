@@ -33,6 +33,20 @@ const help_message: []const u8 =
     \\  --text <text>               The text to encrypt/decrypt.
     \\  --file <path>               The path to a file to encrypt/decrypt.
     \\
+    \\
+    \\RSA Public Key Rules:
+    \\  - Follow the RFC 4253 standard.
+    \\  - Follow the "ssh-rsa" formating.
+    \\
+    \\RSA Private Key Rules:
+    \\  - Follow the RFC 8017 standard.
+    \\  - Start with "-----BEGIN RSA PRIVATE KEY-----" at the first line.
+    \\  - End with "-----END RSA PRIVATE KEY-----" on the last line.
+    \\  - In between is the base 64 encoded private key following the RFC 8017
+    \\    standard and is encoded using PEM.
+    \\  - The base 64 key can span multiple lines or be on a single line but
+    \\    all lines must be deliminated using the "\n" character.
+    \\
 ;
 
 pub fn main() !void {
