@@ -9,7 +9,7 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/main.zig"),
         .target = b.host,
         .optimize = b.standardOptimizeOption(
-            .{ .preferred_optimize_mode = OptimizeMode.Debug },
+            .{ .preferred_optimize_mode = OptimizeMode.ReleaseSafe },
         ),
     });
 
