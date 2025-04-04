@@ -71,9 +71,55 @@ pub const PublicKey = struct {
         };
     }
 
+    /// Creates a public key from a public *exponent* and a *modulus*.
+    /// Performs no checks on the values.
+    ///
+    /// *exponent* and *modulus* must be either primitive integers or a string
+    /// representing an integer. Optionally, the base of the integer string
+    /// can be set using *options.base*, by default it is *16*. If both the
+    /// *exponent* and *modulus* are passed as strings representing integers,
+    /// then they must both have the same base.
+    pub fn create(allocator: Allocator, exponent: anytype, modulus: anytype, options: struct { base: u8 = 16 }) !PublicKey {
+        // Create the public key
+        var public_key = PublicKey{
+            .exponent = try BigIntManaged.init(allocator),
+            .modulus = try BigIntManaged.init(allocator),
+        };
+
+        // Parse the exponent from either a primitive integer or string
+        // representation integer
+        switch (@TypeOf(exponent)) {
+            []const u8, []u8 => try public_key.exponent.setString(options.base, exponent),
+            else => try public_key.exponent.set(exponent),
+        }
+
+        // Parse the modulus from either a primitive integer or string
+        // representation integer
+        switch (@TypeOf(modulus)) {
+            []const u8, []u8 => try public_key.modulus.setString(options.base, modulus),
+            else => try public_key.modulus.set(modulus),
+        }
+
+        // Return the public key
+        return public_key;
+    }
+
     pub fn deinit(self: *PublicKey) void {
-        self.modulus.deinit();
         self.exponent.deinit();
+        self.modulus.deinit();
+    }
+
+    pub fn format(self: *const PublicKey, allocator: Allocator) ![]u8 {
+        return try std.fmt.allocPrint(
+            allocator,
+            \\Modulus: {d}
+            \\Public Exponent: {d}
+        ,
+            .{
+                self.modulus,
+                self.exponent,
+            },
+        );
     }
 
     /// Returns the exponent component of the public key
@@ -156,6 +202,97 @@ pub const PrivateKey = struct {
         };
     }
 
+    // Creates a private key from a public *exponent* and a *modulus*.
+    // Performs no checks on the values.
+    //
+    // *exponent* and *modulus* must be either primitive integers or a string
+    // representing an integer. Optionally, the base of the integer string
+    // can be set using *options.base*, by default it is *16*.
+    pub fn create(
+        allocator: Allocator,
+        prime1: anytype,
+        prime2: anytype,
+        public_exponent: anytype,
+        options: struct { base: u8 = 16 },
+    ) !PrivateKey {
+        // Create the public key
+        var private_key = PrivateKey{
+            .version = 0,
+            .modulus = try BigIntManaged.init(allocator),
+            .public_exponent = try BigIntManaged.init(allocator),
+            .private_exponent = try BigIntManaged.init(allocator),
+            .prime1 = try BigIntManaged.init(allocator),
+            .prime2 = try BigIntManaged.init(allocator),
+            .exponent1 = try BigIntManaged.init(allocator),
+            .exponent2 = try BigIntManaged.init(allocator),
+            .coefficient = try BigIntManaged.init(allocator),
+        };
+
+        // Create some buffers to help
+        var buf1: BigIntManaged = try BigIntManaged.init(allocator);
+        var buf2: BigIntManaged = try BigIntManaged.init(allocator);
+        defer buf1.deinit();
+        defer buf2.deinit();
+
+        // --- Prime 1 ---
+        // Parse prime1 from either a primitive integer or string
+        // representation integer
+        switch (@TypeOf(prime1)) {
+            []const u8, []u8 => try private_key.prime1.setString(options.base, prime1),
+            else => try private_key.prime1.set(prime1),
+        }
+
+        // --- Prime 2 ---
+        // Parse prime2 from either a primitive integer or string
+        // representation integer
+        switch (@TypeOf(prime2)) {
+            []const u8, []u8 => try private_key.prime2.setString(options.base, prime2),
+            else => try private_key.prime2.set(prime2),
+        }
+
+        // --- Public Exponent ---
+        // Parse public_exponent from either a primitive integer or string
+        // representation integer
+        switch (@TypeOf(public_exponent)) {
+            []const u8, []u8 => try private_key.public_exponent.setString(options.base, public_exponent),
+            else => try private_key.public_exponent.set(public_exponent),
+        }
+        try private_key.exponent1.copy(private_key.public_exponent.toConst());
+
+        // --- Calculate the modulus ---
+        try private_key.modulus.mul(&private_key.prime1, &private_key.prime2);
+
+        // --- Calculate Euler's totient function ---
+        var totient: BigIntManaged = try BigIntManaged.init(allocator);
+        defer totient.deinit();
+        try buf1.addScalar(&private_key.prime1, -1);
+        try buf2.addScalar(&private_key.prime2, -1);
+        try totient.mul(&buf1, &buf2);
+
+        // --- Check the validity of the provided public exponent ---
+        // 1 < e
+        try buf1.set(1);
+        if (private_key.public_exponent.order(buf1) != std.math.Order.gt) return error.InvalidPublicExponent;
+
+        // e < totient
+        if (private_key.public_exponent.order(totient) != std.math.Order.lt) return error.InvalidPublicExponent;
+
+        // gcd(e, totient) = 1
+        // try buf1.gcd(&private_key.public_exponent, &totient);
+        // try buf2.set(1);
+        // if (buf1.order(buf2) != std.math.Order.eq) return error.InvalidPublicExponent;
+
+        // --- Calculate the private exponent ---
+        multiplicativeInverse(allocator, &private_key.public_exponent, &totient, &private_key.private_exponent) catch return error.InvalidPublicExponent;
+        try private_key.exponent2.copy(private_key.private_exponent.toConst());
+
+        // --- Calculate the coefficient ---
+        try multiplicativeInverse(allocator, &private_key.prime2, &private_key.prime1, &private_key.coefficient);
+
+        // Return the private key
+        return private_key;
+    }
+
     pub fn deinit(self: *PrivateKey) void {
         self.modulus.deinit();
         self.public_exponent.deinit();
@@ -165,6 +302,33 @@ pub const PrivateKey = struct {
         self.exponent1.deinit();
         self.exponent2.deinit();
         self.coefficient.deinit();
+    }
+
+    pub fn format(self: *const PrivateKey, allocator: Allocator) ![]u8 {
+        return try std.fmt.allocPrint(
+            allocator,
+            \\Version: {d}
+            \\Modulus: {d}
+            \\Public Exponent: {d}
+            \\Private Exponent: {d}
+            \\Prime 1: {d}
+            \\Prime 2: {d}
+            \\Exponent 1: {d}
+            \\Exponent 2: {d}
+            \\Coefficient: {d}
+        ,
+            .{
+                self.version,
+                self.modulus,
+                self.public_exponent,
+                self.private_exponent,
+                self.prime1,
+                self.prime2,
+                self.exponent1,
+                self.exponent2,
+                self.coefficient,
+            },
+        );
     }
 
     /// Returns the modulus of the private key
@@ -208,6 +372,86 @@ pub const PrivateKey = struct {
         return self.coefficient;
     }
 };
+
+const ExtendedGcd = struct {
+    gcd: BigIntManaged,
+    x: BigIntManaged,
+    y: BigIntManaged,
+
+    pub fn calculate(allocator: Allocator, a: *BigIntManaged, b: *BigIntManaged) !ExtendedGcd {
+        // Variables to return
+        var x = try BigIntManaged.initSet(allocator, 0);
+        var y = try BigIntManaged.initSet(allocator, 1);
+
+        // Inner computational variables
+        var u = try BigIntManaged.initSet(allocator, 1);
+        defer u.deinit();
+        var v = try BigIntManaged.initSet(allocator, 0);
+        defer v.deinit();
+        var q = try BigIntManaged.init(allocator);
+        defer q.deinit();
+        var r = try BigIntManaged.init(allocator);
+        defer r.deinit();
+        var m = try BigIntManaged.init(allocator);
+        defer m.deinit();
+        var n = try BigIntManaged.init(allocator);
+        defer n.deinit();
+
+        // Copies of a and b that will be mutilated
+        var aa = try a.clone();
+        defer aa.deinit();
+        var bb = try b.clone(); // At the end this will be the gcd(a,b)
+
+        while (!aa.eqlZero()) {
+            // q = bb // aa (remainder r)
+            try q.divFloor(&r, &bb, &aa);
+
+            // m = x - u*q
+            try m.mul(&u, &q);
+            try m.sub(&x, &m);
+
+            // n = y - v*q
+            try n.mul(&v, &q);
+            try n.sub(&y, &n);
+
+            try bb.copy(aa.toConst()); // bb <- aa
+            try aa.copy(r.toConst()); // aa <- r
+            try x.copy(u.toConst()); // x  <- u
+            try y.copy(v.toConst()); // y  <- v
+            try u.copy(m.toConst()); // u  <- m
+            try v.copy(n.toConst()); // v  <- n
+        }
+
+        return .{
+            .gcd = bb,
+            .x = x,
+            .y = y,
+        };
+    }
+
+    pub fn deinit(self: *ExtendedGcd) void {
+        self.gcd.deinit();
+        self.x.deinit();
+        self.y.deinit();
+    }
+};
+
+fn multiplicativeInverse(allocator: Allocator, a: *BigIntManaged, m: *BigIntManaged, result: *BigIntManaged) !void {
+    // Perform the extended Euclidean algorithm
+    var egcd = try ExtendedGcd.calculate(allocator, a, m);
+    defer egcd.deinit();
+
+    // Create a buffer to help
+    var buffer: BigIntManaged = try BigIntManaged.init(allocator);
+    defer buffer.deinit();
+
+    // If the gcd does not equal 1 then the multiplicative inverse does not exist
+    try buffer.set(1);
+    if (egcd.gcd.order(buffer) != std.math.Order.eq) return error.MultiplicativeInverseDNE;
+
+    // Calculate the residue of x
+    try bigIntModulo(&egcd.x, m, result);
+}
 
 const DerSequence = struct {
     allocator: Allocator,
@@ -595,4 +839,11 @@ pub fn main() !void {
     defer allocator.free(decrypted_plain_text);
 
     std.debug.print("Decrypted cipher text / Plain text: {s}\n\n\n", .{decrypted_plain_text});
+
+    var private_key_2: PrivateKey = try PrivateKey.create(allocator, 5, 11, 3, .{});
+    defer private_key_2.deinit();
+    const private_key_2_fmt: []u8 = try private_key_2.format(allocator);
+    defer allocator.free(private_key_2_fmt);
+
+    std.debug.print("{s}", .{private_key_2_fmt});
 }
