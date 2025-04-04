@@ -1,11 +1,16 @@
 const std = @import("std");
 
+const OptimizeMode = std.builtin.OptimizeMode;
+
 pub fn build(b: *std.Build) void {
     // ----- Main executable -----
     const exe = b.addExecutable(.{
         .name = "rsa",
         .root_source_file = b.path("src/main.zig"),
         .target = b.host,
+        .optimize = b.standardOptimizeOption(
+            .{ .preferred_optimize_mode = OptimizeMode.Debug },
+        ),
     });
 
     // ----- Install -----
