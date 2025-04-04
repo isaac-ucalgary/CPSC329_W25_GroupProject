@@ -1,9 +1,12 @@
 // Imports
 const std = @import("std");
+const crypt = @import("./crypt.zig");
 
 // Inheritance
 const Allocator = std.mem.Allocator;
 const BigIntManaged = std.math.big.int.Managed;
+const PublicKey = crypt.PublicKey;
+const PrivateKey = crypt.PrivateKey;
 const eql = std.mem.eql;
 
 pub const ArgParseError = error{
@@ -19,8 +22,8 @@ pub const ArgParseError = error{
 pub const ProcessedArgs = struct {
     do_encrypt: bool = false,
     do_decrypt: bool = false,
-    public_key: ?BigIntManaged = null,
-    private_key: ?BigIntManaged = null,
+    public_key: ?PublicKey = null,
+    private_key: ?PrivateKey = null,
     source_text: []u8 = undefined,
     allocator: Allocator,
 
@@ -54,8 +57,25 @@ pub const ProcessedArgs = struct {
         while (args.next()) |arg| {
             // Parse options
             if (eql(u8, arg, "--help")) return error.HelpFlagSet;
-            if (eql(u8, arg, "--public_key")) try getKeyArg(allocator, &processed_args.public_key, &args);
-            if (eql(u8, arg, "--private_key")) try getKeyArg(allocator, &processed_args.private_key, &args);
+            // if (eql(u8, arg, "--public_key")) try getKeyArg(allocator, &processed_args.public_key, &args);
+
+            if (eql(u8, arg, "--public_key")) {
+                processed_args.public_key = try PublicKey.parse(allocator, args.next() orelse return error.MissingOptionParameter);
+            }
+
+            if (eql(u8, arg, "--public_key_file")) {
+                processed_args.public_key = try getKeyFromFile(allocator, PublicKey, args.next() orelse return error.MissingOptionParameter);
+            }
+
+            // if (eql(u8, arg, "--private_key")) try getKeyArg(allocator, &processed_args.private_key, &args);
+            if (eql(u8, arg, "--private_key")) {
+                processed_args.private_key = try PrivateKey.parse(allocator, args.next() orelse return error.MissingOptionParameter);
+            }
+
+            if (eql(u8, arg, "--private_key_file")) {
+                processed_args.private_key = try getKeyFromFile(allocator, PrivateKey, args.next() orelse return error.MissingOptionParameter);
+            }
+
             if (eql(u8, arg, "--text")) input_text = args.next();
             if (eql(u8, arg, "--file")) input_file = args.next();
         }
@@ -69,6 +89,15 @@ pub const ProcessedArgs = struct {
             processed_args.source_text = try std.fs.cwd().readFileAlloc(allocator, file_path, @as(usize, 0) -% 1);
         } else return error.NoSource;
 
+        // If the private key was provided but the public was not, then make
+        // a public key from the private key.
+        if (processed_args.private_key) |private_key| {
+            if (processed_args.public_key == null) {
+                processed_args.public_key = try private_key.makePublicKey(allocator);
+            }
+        }
+
+        // Return the processed args
         return processed_args;
     }
 
@@ -104,5 +133,14 @@ pub const ProcessedArgs = struct {
             output.*.?.deinit();
             output.* = null;
         };
+    }
+
+    fn getKeyFromFile(allocator: Allocator, Key: type, file_path: []const u8) !Key {
+        // Try to get the contents of the key file
+        const key_file_contents: []u8 = try std.fs.cwd().readFileAlloc(allocator, file_path, std.math.maxInt(usize));
+        defer allocator.free(key_file_contents);
+
+        // Parse the key from the file contents
+        return try Key.parse(allocator, key_file_contents);
     }
 };
