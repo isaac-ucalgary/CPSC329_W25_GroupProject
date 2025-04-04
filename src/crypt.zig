@@ -121,6 +121,7 @@ pub const PrivateKey = struct {
         // Remove the wrapper from the input
         const unwrapped_input: []const u8 = input[key_prefix.len .. input.len - key_suffix.len];
         const input_key: []u8 = try allocator.alloc(u8, std.mem.replacementSize(u8, unwrapped_input, "\n", ""));
+        defer allocator.free(input_key);
         _ = std.mem.replace(u8, unwrapped_input, "\n", "", input_key);
 
         // --- Decode the input key ---
@@ -529,7 +530,7 @@ fn charsToBigInt(allocator: Allocator, chars: []const u8) !BigIntManaged {
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    // defer _ = gpa.deinit();
+    defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
     const small_test: bool = false;
