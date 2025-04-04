@@ -277,11 +277,6 @@ pub const PrivateKey = struct {
         // e < totient
         if (private_key.public_exponent.order(totient) != std.math.Order.lt) return error.InvalidPublicExponent;
 
-        // gcd(e, totient) = 1
-        // try buf1.gcd(&private_key.public_exponent, &totient);
-        // try buf2.set(1);
-        // if (buf1.order(buf2) != std.math.Order.eq) return error.InvalidPublicExponent;
-
         // --- Calculate the private exponent ---
         multiplicativeInverse(allocator, &private_key.public_exponent, &totient, &private_key.private_exponent) catch return error.InvalidPublicExponent;
         try private_key.exponent2.copy(private_key.private_exponent.toConst());
