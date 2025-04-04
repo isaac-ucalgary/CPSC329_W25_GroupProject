@@ -1,14 +1,14 @@
 // Imports
 const std = @import("std");
-const ProcessedArgs = @import("./process_args.zig").ProcessedArgs;
 const crypt = @import("./crypt.zig");
+const ProcessedArgs = @import("./process_args.zig").ProcessedArgs;
 
 // Inheritance
 const Allocator = std.mem.Allocator;
 const BigIntManaged = std.math.big.int.Managed;
-const SplitIterator = std.mem.SplitIterator;
-const PublicKey = crypt.PublicKey;
 const PrivateKey = crypt.PrivateKey;
+const PublicKey = crypt.PublicKey;
+const SplitIterator = std.mem.SplitIterator;
 const eql = std.mem.eql;
 const log = std.log;
 
@@ -65,11 +65,11 @@ pub fn main() !void {
             error.FileNotFound => std.log.err("Provided file does not exist. Aborting...", .{}),
             error.FileTooBig => std.log.err("The provided file is too big. Aborting...", .{}),
             error.HelpFlagSet, error.MissingCommand => std.debug.print("{s}", .{help_message}),
+            error.OutOfMemory => std.log.err("System ran out of memory. Aborting...", .{}),
             error.MissingOptionParameter => std.log.err(
                 "Missing option parameter. Use \"--help\" for usage instructions.",
                 .{},
             ),
-            error.OutOfMemory => std.log.err("System ran out of memory. Aborting...", .{}),
             error.NoSource, error.TooManySources => std.log.err(
                 "Exactly one of either \"--text <text>\" or \"--file <path>\" must be provided. Aborting...",
                 .{},
