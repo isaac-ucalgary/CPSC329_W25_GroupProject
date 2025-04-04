@@ -157,11 +157,17 @@ pub const PrivateKey = struct {
     pub fn parse(allocator: Allocator, input: []const u8) !PrivateKey {
         // Define the expected prefix and suffix of the input key
         const key_prefix: []const u8 = "-----BEGIN RSA PRIVATE KEY-----\n";
-        const key_suffix: []const u8 = "\n-----END RSA PRIVATE KEY-----";
+        var key_suffix: []const u8 = "\n-----END RSA PRIVATE KEY-----";
 
         // --- Check that the input is of the correct format ---
         if (!startsWith(u8, input, key_prefix)) return error.InvalidKeyFormat; // Check prefix
-        if (!endsWith(u8, input, key_suffix)) return error.InvalidKeyFormat; // Check suffix
+        if (!endsWith(u8, input, key_suffix)) {
+            key_suffix = "\n-----END RSA PRIVATE KEY-----\n";
+            if (!endsWith(u8, input, key_suffix)) {
+                std.log.err("{s}", .{input});
+                return error.InvalidKeyFormat; // Check suffix
+            }
+        }
 
         // --- Clean up the input key ---
         // Remove the wrapper from the input
@@ -324,6 +330,22 @@ pub const PrivateKey = struct {
                 self.coefficient,
             },
         );
+    }
+
+    /// Creates a public key from the parameters of the private key
+    pub fn makePublicKey(self: *const PrivateKey, allocator: Allocator) !PublicKey {
+        // Create a new public key object
+        var public_key = PublicKey{
+            .exponent = try BigIntManaged.init(allocator),
+            .modulus = try BigIntManaged.init(allocator),
+        };
+
+        // Transfer the relevant parameters over to the public key
+        try public_key.exponent.copy(self.public_exponent.toConst());
+        try public_key.modulus.copy(self.modulus.toConst());
+
+        // Return the new public key
+        return public_key;
     }
 
     /// Returns the modulus of the private key
