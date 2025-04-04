@@ -1,11 +1,14 @@
 // Imports
 const std = @import("std");
 const ProcessedArgs = @import("./process_args.zig").ProcessedArgs;
+const crypt = @import("./crypt.zig");
 
 // Inheritance
 const Allocator = std.mem.Allocator;
 const BigIntManaged = std.math.big.int.Managed;
 const SplitIterator = std.mem.SplitIterator;
+const PublicKey = crypt.PublicKey;
+const PrivateKey = crypt.PrivateKey;
 const eql = std.mem.eql;
 const log = std.log;
 
@@ -18,15 +21,17 @@ const help_message: []const u8 =
     \\  rsa decrypt --private_key <key> (--text <text> | --file <path>)
     \\
     \\Commands:
-    \\  encrypt                 Perform an encryption.
-    \\  decrypt                 Perform a decryption.
+    \\  encrypt                     Perform an encryption.
+    \\  decrypt                     Perform a decryption.
     \\
     \\Options:
-    \\  --public_key <key>      The public key to use for encryption.
-    \\  --private_key <key>     The private key to use for decryption.
+    \\  --public_key <key>          The public key to use for encryption.
+    \\  --private_key <key>         The private key to use for decryption.
+    \\  --public_key_file <path>    The public key file to use for encryption.
+    \\  --private_key_file <path>   The private key file to use for decryption.
     \\
-    \\  --text <text>           The text to encrypt/decrypt.
-    \\  --file <path>           The path to a file to encrypt/decrypt.
+    \\  --text <text>               The text to encrypt/decrypt.
+    \\  --file <path>               The path to a file to encrypt/decrypt.
     \\
 ;
 
@@ -38,7 +43,6 @@ pub fn main() !void {
 
     // Get std out writer stream
     const stdout_writer = std.io.getStdOut().writer();
-    _ = stdout_writer;
 
     // ----- PARSE ARGS -----
     var processed_args = ProcessedArgs.init(allocator) catch |err| {
@@ -47,6 +51,10 @@ pub fn main() !void {
             error.FileNotFound => std.log.err("Provided file does not exist. Aborting...", .{}),
             error.FileTooBig => std.log.err("The provided file is too big. Aborting...", .{}),
             error.HelpFlagSet, error.MissingCommand => std.debug.print("{s}", .{help_message}),
+            error.MissingOptionParameter => std.log.err(
+                "Missing option parameter. Use \"--help\" for usage instructions.",
+                .{},
+            ),
             error.OutOfMemory => std.log.err("System ran out of memory. Aborting...", .{}),
             error.NoSource, error.TooManySources => std.log.err(
                 "Exactly one of either \"--text <text>\" or \"--file <path>\" must be provided. Aborting...",
@@ -64,13 +72,35 @@ pub fn main() !void {
 
     // ----- ENCRYPT -----
     if (processed_args.do_encrypt) {
-        std.debug.print("TODO Encrypt\n", .{});
-        if (processed_args.private_key) |_| log.warn("Private key provided but not required for encrypting.", .{});
+        // Get the public key.
+        // Abort if no public or private key was provided.
+        const public_key: PublicKey = processed_args.public_key orelse {
+            log.err("Missing both public and private key. Cannot encrypt without at least one. Aborting...", .{});
+            return;
+        };
+
+        // Encrypt the plain text to stout
+        const cipher_text: []u8 = try crypt.encrypt(allocator, public_key, processed_args.source_text);
+        defer allocator.free(cipher_text);
+
+        // Print the cipher text
+        try stdout_writer.print("{s}", .{cipher_text});
     }
 
     // ----- DECRYPT -----
     if (processed_args.do_decrypt) {
-        std.debug.print("TODO Decrypt\n", .{});
-        if (processed_args.public_key) |_| log.warn("Public key provided but not required for decrypting.", .{});
+        // Get the private key.
+        // Abort if no private key was provided.
+        const private_key: PrivateKey = processed_args.private_key orelse {
+            log.err("Missing private key. Cannot decrypt. Aborting...", .{});
+            return;
+        };
+
+        // Decrypt the cipher text
+        const plain_text: []u8 = try crypt.decrypt(allocator, private_key, processed_args.source_text);
+        defer allocator.free(plain_text);
+
+        // Print the plain text to stout
+        try stdout_writer.print("{s}", .{plain_text});
     }
 }
