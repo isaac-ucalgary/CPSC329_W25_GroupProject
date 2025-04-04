@@ -56,30 +56,32 @@ pub const ProcessedArgs = struct {
         // Iterate over the rest of the cli args
         while (args.next()) |arg| {
             // Parse options
-            if (eql(u8, arg, "--help")) return error.HelpFlagSet;
-            // if (eql(u8, arg, "--public_key")) try getKeyArg(allocator, &processed_args.public_key, &args);
-
-            if (eql(u8, arg, "--public_key")) {
-                processed_args.public_key = try PublicKey.parse(allocator, args.next() orelse return error.MissingOptionParameter);
-            }
-
-            if (eql(u8, arg, "--public_key_file")) {
-                processed_args.public_key = try getKeyFromFile(allocator, PublicKey, args.next() orelse return error.MissingOptionParameter);
-            }
-
-            // if (eql(u8, arg, "--private_key")) try getKeyArg(allocator, &processed_args.private_key, &args);
-            if (eql(u8, arg, "--private_key")) {
-                processed_args.private_key = try PrivateKey.parse(allocator, args.next() orelse return error.MissingOptionParameter);
-            }
-
-            if (eql(u8, arg, "--private_key_file")) {
-                processed_args.private_key = try getKeyFromFile(allocator, PrivateKey, args.next() orelse return error.MissingOptionParameter);
-            }
-
-            if (eql(u8, arg, "--text")) input_text = args.next();
-            if (eql(u8, arg, "--file")) input_file = args.next();
+            if (eql(u8, arg, "--help")) return error.HelpFlagSet else if (eql(u8, arg, "--public_key")) {
+                processed_args.public_key = try PublicKey.parse(
+                    allocator,
+                    args.next() orelse return error.MissingOptionParameter,
+                );
+            } else if (eql(u8, arg, "--public_key_file")) {
+                processed_args.public_key = try getKeyFromFile(
+                    allocator,
+                    PublicKey,
+                    args.next() orelse return error.MissingOptionParameter,
+                );
+            } else if (eql(u8, arg, "--private_key")) {
+                processed_args.private_key = try PrivateKey.parse(
+                    allocator,
+                    args.next() orelse return error.MissingOptionParameter,
+                );
+            } else if (eql(u8, arg, "--private_key_file")) {
+                processed_args.private_key = try getKeyFromFile(
+                    allocator,
+                    PrivateKey,
+                    args.next() orelse return error.MissingOptionParameter,
+                );
+            } else if (eql(u8, arg, "--text")) input_text = args.next() else if (eql(u8, arg, "--file")) input_file = args.next();
         }
 
+        // Get the source text from either the input text or the input file
         if (input_text) |in_text| {
             if (input_file == null) {
                 processed_args.source_text = try allocator.alloc(u8, in_text.len);
@@ -107,34 +109,7 @@ pub const ProcessedArgs = struct {
         if (self.private_key) |*k| k.deinit();
     }
 
-    fn getKeyArg(allocator: Allocator, output: *?BigIntManaged, args: *std.process.ArgIterator) !void {
-
-        // Get the next value if it exists
-        var value: []const u8 = args.next() orelse return;
-
-        // Get the base from any existing integer affix
-        var base: u8 = 10;
-        if (value.len >= 2 and value[0] == '0') {
-            // Obtain the number base of the value
-            base = switch (value[1]) {
-                'x', 'X' => 16,
-                'o', 'O' => 8,
-                'b', 'B' => 2,
-                else => 10,
-            };
-
-            // Remove integer affix
-            if (value[1] < 48 or 57 < value[1]) value = value[2..];
-        }
-
-        // Parse the value
-        output.* = try BigIntManaged.init(allocator);
-        output.*.?.setString(base, value) catch {
-            output.*.?.deinit();
-            output.* = null;
-        };
-    }
-
+    // Gets a public key object from a supplied file path
     fn getKeyFromFile(allocator: Allocator, Key: type, file_path: []const u8) !Key {
         // Try to get the contents of the key file
         const key_file_contents: []u8 = try std.fs.cwd().readFileAlloc(allocator, file_path, std.math.maxInt(usize));
