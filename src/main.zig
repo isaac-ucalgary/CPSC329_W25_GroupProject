@@ -17,18 +17,19 @@ const help_message: []const u8 =
     \\Result will printed to standard out.
     \\
     \\Usage: 
-    \\  rsa encrypt --public_key <key> (--text <text> | --file <path>)
-    \\  rsa decrypt --private_key <key> (--text <text> | --file <path>)
+    \\  rsa encrypt (--public-key-file <path> | --public-key <key>) (--text <text> | --file <path>)
+    \\  rsa encrypt (--private-key-file <path> | --private-key <key>) (--text <text> | --file <path>)
+    \\  rsa decrypt (--private-key-file <path> | --private-key <key>) (--text <text> | --file <path>)
     \\
     \\Commands:
     \\  encrypt                     Perform an encryption.
     \\  decrypt                     Perform a decryption.
     \\
     \\Options:
-    \\  --public_key <key>          The public key to use for encryption.
-    \\  --private_key <key>         The private key to use for decryption.
-    \\  --public_key_file <path>    The public key file to use for encryption.
-    \\  --private_key_file <path>   The private key file to use for decryption.
+    \\  --public-key <key>          The public key to use for encryption.
+    \\  --private-key <key>         The private key to use for decryption.
+    \\  --public-key-file <path>    The public key file to use for encryption.
+    \\  --private-key-file <path>   The private key file to use for decryption.
     \\
     \\  --text <text>               The text to encrypt/decrypt.
     \\  --file <path>               The path to a file to encrypt/decrypt.

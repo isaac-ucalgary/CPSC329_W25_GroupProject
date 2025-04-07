@@ -56,23 +56,25 @@ pub const ProcessedArgs = struct {
         // Iterate over the rest of the cli args
         while (args.next()) |arg| {
             // Parse options
-            if (eql(u8, arg, "--help")) return error.HelpFlagSet else if (eql(u8, arg, "--public_key")) {
+            if (eql(u8, arg, "--help")) {
+                return error.HelpFlagSet;
+            } else if (eql(u8, arg, "--public-key")) {
                 processed_args.public_key = try PublicKey.parse(
                     allocator,
                     args.next() orelse return error.MissingOptionParameter,
                 );
-            } else if (eql(u8, arg, "--public_key_file")) {
+            } else if (eql(u8, arg, "--public-key-file")) {
                 processed_args.public_key = try getKeyFromFile(
                     allocator,
                     PublicKey,
                     args.next() orelse return error.MissingOptionParameter,
                 );
-            } else if (eql(u8, arg, "--private_key")) {
+            } else if (eql(u8, arg, "--private-key")) {
                 processed_args.private_key = try PrivateKey.parse(
                     allocator,
                     args.next() orelse return error.MissingOptionParameter,
                 );
-            } else if (eql(u8, arg, "--private_key_file")) {
+            } else if (eql(u8, arg, "--private-key-file")) {
                 processed_args.private_key = try getKeyFromFile(
                     allocator,
                     PrivateKey,
