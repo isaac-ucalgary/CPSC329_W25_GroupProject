@@ -170,11 +170,23 @@ pub const PrivateKey = struct {
         }
 
         // --- Clean up the input key ---
-        // Remove the wrapper from the input
-        const unwrapped_input: []const u8 = input[key_prefix.len .. input.len - key_suffix.len];
-        const input_key: []u8 = try allocator.alloc(u8, std.mem.replacementSize(u8, unwrapped_input, "\n", ""));
+        const input_key: []u8 = blk: {
+            // Remove the wrapper from the input
+            const unwrapped_input: []const u8 = input[key_prefix.len .. input.len - key_suffix.len];
+
+            // Replace "\r" characters
+            const intermediate_input_key: []u8 = try allocator.alloc(u8, std.mem.replacementSize(u8, unwrapped_input, "\r", ""));
+            defer allocator.free(intermediate_input_key);
+            _ = std.mem.replace(u8, unwrapped_input, "\r", "", intermediate_input_key);
+
+            // Replace "\n" characters
+            const return_value: []u8 = try allocator.alloc(u8, std.mem.replacementSize(u8, intermediate_input_key, "\n", ""));
+            _ = std.mem.replace(u8, intermediate_input_key, "\n", "", return_value);
+
+            // Return the cleaned input key
+            break :blk return_value;
+        };
         defer allocator.free(input_key);
-        _ = std.mem.replace(u8, unwrapped_input, "\n", "", input_key);
 
         // --- Decode the input key ---
         // -- Decode from base 64 --
