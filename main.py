@@ -1,0 +1,7 @@
+import tkinter
+
+# The main loop.
+def main():
+
+if __name__ = "__main__":
+    main()
