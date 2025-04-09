@@ -2,7 +2,7 @@
 let
   pkgs = import <nixpkgs> {};
 
-  python = pkgs.python314Full.override {
+  python = pkgs.python3Full.override {
     self = python;
     # packageOverrides = pyfinal: pyprev: {
     #   # mysql-connector = pyfinal.callPackage package-mysql-connector { };
