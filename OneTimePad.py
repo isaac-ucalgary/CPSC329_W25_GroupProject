@@ -119,35 +119,83 @@ def textPad():
         textPad()
 
 
-def digitalEnter():
-    temp = input("Input as either binary or hexadecimal: ")
-    unciphered = ""
-    try:
-        unciphered = int(temp, 2)
-        return ["b", temp], unciphered
-    except:
+def digitalEnter(prompt: str) -> tuple[str, str, int]:
+    print(prompt)
+
+    # Parse the number
+    unciphered: int
+    base_type: str
+    while True:
+        # Get the number from the user
+        temp: str = input("Input number (empty for help): ")
+
+        # Provide help info for number input
+        while temp == "":
+            print(
+                'For binary numbers, prefix with "0b".'
+                + '\nFor hexadecimal numbers, prefix with "0x".'
+                + '\nFor octal numbers, prefix with "0".'
+                + "\nFor decimal numbers, no prefix is required."
+            )
+            temp = input("Input number (empty for help): ")
+
+        # --- Parse the number ---
+        # Get base for parsing the number
+        base_type = "d"
+        base: int = 10  # Default to decimal
+        if len(temp) >= 2 and temp[0] == "0":
+            match temp[1]:
+                case "b":
+                    base = 2  # Binary
+                    temp = temp[2:]
+                    base_type = "b"
+                case "x":
+                    base = 16  # Hexadecimal
+                    temp = temp[2:]
+                    base_type = "x"
+                case _:
+                    base = 8  # Octal
+                    temp = temp[1:]
+                    base_type = "o"
+
         try:
-            unciphered = int(temp, 16)
-            return ["h", temp], unciphered
+            unciphered = int(temp, base)
         except:
-            print("that is not valid binary or hex")
-            temp = input("(e)to exit or enter to continue")
-            if temp == "e":
-                digitalPad()
-            else:
-                _ = digitalEnter()
+            print("Parse failed. Please try again.")
+        else:
+            break
+
+    return base_type, temp, unciphered
+
+    # # --- OLD ---
+    # temp = input("Input as either binary or hexadecimal: ")
+    # unciphered = ""
+    # try:
+    #     unciphered = int(temp, 2)
+    #     return ["b", temp], unciphered
+    # except:
+    #     try:
+    #         unciphered = int(temp, 16)
+    #         return ["h", temp], unciphered
+    #     except:
+    #         print("that is not valid binary or hex")
+    #         temp = input("(e)to exit or enter to continue")
+    #         if temp == "e":
+    #             digitalPad()
+    #         else:
+    #             _ = digitalEnter()
 
 
 def digitalPad():
     optype = input("Would you like to encode(e) or decode(d)? ")
     if optype == "e":
-        print("Please enter the message: ")
-        ptype, plaintext = digitalEnter()
-        print("Please enter the key to use or leave it  blank to generate one: ")
-        otype, onetime = digitalEnter()
-        if onetime == "":
-            onetime = random.getrandbits(len(plaintext))
-            print(bin(onetime)[2:].zfill(16))
+        ptype, plaintext_raw, plaintext = digitalEnter("Please enter the message.")
+        _, _, onetime = digitalEnter(
+            "Please enter the key to use or leave it  blank to generate one."
+        )
+        # if onetime == "":
+        #     onetime = random.getrandbits(len(plaintext))
+        #     print(bin(onetime)[2:].zfill(16))
 
         # Encoding time
         cipherBits = plaintext ^ onetime
@@ -158,25 +206,27 @@ def digitalPad():
         #     length = len(ptype[1])
         # else:
         #     length = len(ptype[1] * 4)
-        length = len(ptype[1] * (1 if ptype[0] == "b" else 4))
+        length = len(plaintext_raw * (1 if ptype == "b" else 4))
 
         print(
             f"Ciphertext in binary: {bin(cipherBits)[2:].zfill(length)}"
-            + f"One time pad in binary: {bin(onetime)[2:].zfill(length)}"
-            + f"Ciphertext in Hex: {hex(cipherBits)[2:]}"
-            + f"one time pad in hex: {hex(onetime)[2:]}"
+            + f"\nOne time pad in binary: {bin(onetime)[2:].zfill(length)}"
+            + f"\nCiphertext in Hex: {hex(cipherBits)[2:]}"
+            + f"\none time pad in hex: {hex(onetime)[2:]}"
         )
 
         # loop /exit
         digitalPad()
     if optype == "d":
-        print("Please enter the ciphertext: ")
-        ptype, ciphertext = digitalEnter()
-        print("Please enter the key to use or leave it  blank to generate one: ")
-        otype, onetime = digitalEnter()
-        if onetime == "":
-            onetime = random.getrandbits(len(plaintext))
-            # print(bin(onetime)[2:].zfill(16))
+        ptype, ciphertext_raw, ciphertext = digitalEnter(
+            "Please enter the ciphertext: "
+        )
+        _, _, onetime = digitalEnter(
+            "Please enter the key to use or leave it  blank to generate one: "
+        )
+        # if onetime == "":
+        #     onetime = random.getrandbits(len(plaintext))
+        #     # print(bin(onetime)[2:].zfill(16))
         # if its valid but too short, loop it until its long enough
         # while(len(otype[1])<len(ptype[1])):
         #    onetime += onetime
@@ -189,13 +239,13 @@ def digitalPad():
         #     length = len(ptype[1])
         # else:
         #     length = len(ptype[1] * 4)
-        length = len(ptype[1] * (1 if ptype[0] == "b" else 4))
+        length = len(ciphertext_raw * (1 if ptype == "b" else 4))
 
         print(
             f"Plaintext in binary: {bin(plainBits)[2:].zfill(length)}"
-            + f"One time pad in binary: {bin(onetime)[2:].zfill(length)}"
-            + f"Plaintext in Hex: {hex(plainBits)[2:]}"
-            + f"One time pad in hex: {hex(onetime)[2:]}"
+            + f"\nOne time pad in binary: {bin(onetime)[2:].zfill(length)}"
+            + f"\nPlaintext in Hex: {hex(plainBits)[2:]}"
+            + f"\nOne time pad in hex: {hex(onetime)[2:]}"
         )
 
         # loop /exit
