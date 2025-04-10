@@ -23,4 +23,4 @@ The one‑time pad achieves perfect secrecy by combining plaintext with a truly 
 
 
 Thank you Ethan for doing the writing
-James worked on the GUI in TKinter.
+James did the GUI.
