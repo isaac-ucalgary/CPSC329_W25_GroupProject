@@ -3,10 +3,6 @@ from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
 
-# This allows us to call the RSA binary with command-line args
-import subprocess
-import os
-
 # This imports the frequency analysis and OTP files
 import frequency_analysis
 import rsa_parse
@@ -156,20 +152,18 @@ note_pubkey_rsa.add(text_pubkey_rsa, text="Public key from text")
 note_pubkey_rsa.add(file_pubkey_rsa, text="Public key from file")
 
 
-# Encrypt/decrypt buttons
-rsa_encrypt = Button(
-    rsa_scr, height=2, width=20, text="Encrypt", command=lambda: get_file()
-).place(relx=0.6, y=600)
-rsa_decrypt = Button(
-    rsa_scr, height=2, width=20, text="Decrypt", command=lambda: func_rsa("decrypt")
-).place(relx=0.72, y=600)
-
-
 # From text options.
-plaintext_rsa = Text(text_plaintext_rsa, wrap=CHAR).pack(expand=True, fill=BOTH)
-ciphtext_rsa = Text(text_ciphtext_rsa, wrap=CHAR).pack(expand=True, fill=BOTH)
-privtext_rsa = Text(text_privkey_rsa, wrap=CHAR).pack(expand=True, fill=BOTH)
-pubtext_rsa = Text(text_pubkey_rsa, wrap=CHAR).pack(expand=True, fill=BOTH)
+in_plaintext_rsa = StringVar()
+in_ciphtext_rsa = StringVar()
+
+plaintext_rsa = Text(text_plaintext_rsa, wrap=CHAR)
+plaintext_rsa.pack(expand=True, fill=BOTH)
+ciphtext_rsa = Text(text_ciphtext_rsa, wrap=CHAR)
+ciphtext_rsa.pack(expand=True, fill=BOTH)
+privtext_rsa = Text(text_privkey_rsa, wrap=CHAR)
+privtext_rsa.pack(expand=True, fill=BOTH)
+pubtext_rsa = Text(text_pubkey_rsa, wrap=CHAR)
+pubtext_rsa.pack(expand=True, fill=BOTH)
 
 
 # For each of the "from text" frames, we add a button to select a file and field for currently selected file.
@@ -211,6 +205,26 @@ get_pubfile_rsa = Button(
     file_pubkey_rsa, text="Choose file", command=lambda: get_file(in_pubfile_rsa)
 ).place(relx=0.6, rely=0.5)
 
+# Encrypt/decrypt buttons
+rsa_encrypt = Button(
+    rsa_scr,
+    height=2,
+    width=20,
+    text="Encrypt",
+    command=lambda: func_rsa(
+        "encrypt",
+    ),
+).place(relx=0.6, y=600)
+rsa_decrypt = Button(
+    rsa_scr,
+    height=2,
+    width=20,
+    text="Decrypt",
+    command=lambda: func_rsa(
+        "decrypt",
+    ),
+).place(relx=0.72, y=600)
+
 
 # Functions dealing with input call functions in other Python files
 def func_frequency_analysis_input():
@@ -229,16 +243,18 @@ def func_otp_input():
 # Allow user to input a filepath from a textbox.
 
 
-# REQUIRED: enc_or_dec,
 def func_rsa(
     enc_or_dec: str,
-    pub_or_privkey: str,
-    key_file: str,
-    text_in: str = None,
-    file_in: str = None,
 ):
-
-    rsa_parse.rsa_parse()
+    # Get values for this function.
+    pub_key_file: str = in_pubfile_rsa.get()
+    pub_key_text: str = pubtext_rsa.get("1.0", "end-1c")
+    priv_key_file: str = in_privfile_rsa.get()
+    priv_key_text: str = privtext_rsa.get("1.0", "end-1c")
+    plain_file: str = in_plainfile_rsa.get()
+    plain_text: str = plaintext_rsa.get("1.0", "end-1c")
+    ciph_file: str = in_ciphfile_rsa.get()
+    ciph_text: str = ciphtext_rsa.get("1.0", "end-1c")
 
 
 # This calls your OS's file manager to select the file and writes the filepath to appropriate text field
