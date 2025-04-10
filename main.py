@@ -1,7 +1,17 @@
+import tkinter as tk
 from tkinter import *
 from tkinter import ttk
+from tkinter import filedialog
 
+# This allows us to call the RSA binary with command-line args
+import subprocess
+import os
+
+# This imports the frequency analysis and OTP files
 import frequency_analysis
+import rsa_parse
+
+# import OTP here...
 
 root = Tk()
 root.geometry("1000x700")
@@ -14,8 +24,8 @@ notebook.pack(padx=10, pady=10, expand=True)
 # Each frame is a tab with set dimensions.
 home_scr = ttk.Frame(notebook, width=1200, height=900)
 freq_scr = ttk.Frame(notebook, width=1200, height=900)
-rsa_scr = ttk.Frame(notebook, width=1200, height=900)
 otp_scr = ttk.Frame(notebook, width=1200, height=900)
+rsa_scr = ttk.Frame(notebook, width=1200, height=900)
 
 # Displays the frames
 home_scr.pack(fill="both", expand=True)
@@ -55,20 +65,197 @@ freq_buttonanalyse = Button(
     height=2,
     width=20,
     text="Analyse",
-    command=lambda: frequency_analysis_input(),
+    command=lambda: func_frequency_analysis_input(),
 )
 
 freq_label.place(x=25, y=25)
-freq_input.place(x=800, y=25)
-freq_output.place(x=800, y=200)
-freq_buttonanalyse.place(x=840, y=400)
+freq_input.place(relx=0.75, rely=0.05)
+freq_output.place(relx=0.75, rely=0.30)
+freq_buttonanalyse.place(relx=0.75, rely=0.55)
+
+# One-time pad page-------------------------------------------------------
+otp_label = Label(
+    otp_scr,
+    anchor="w",
+    justify="left",
+    wraplength="300",
+    font=("Arial", 12),
+    text="About:\nbla bla bla",
+)
+otp_input = Text(otp_scr, height=10, width=40)
+otp_output = Text(otp_scr, height=10, width=40)
+otp_button = Button(
+    otp_scr, height=2, width=20, text="Do the thing.", command=lambda: func_otp_input()
+)
+
+otp_label.place(x=25, y=25)
+otp_input.place(relx=0.75, rely=0.05)
+otp_output.place(relx=0.75, rely=0.30)
+otp_button.place(relx=0.75, rely=0.55)
+
+# RSA page-----------------------------------------------------------------
+rsa_label = Label(
+    rsa_scr,
+    anchor="w",
+    justify="left",
+    wraplength="300",
+    font=("Arial", 12),
+    text="Rivest or something....... also this wraps at some point btw.",
+).place(x=25, y=25)
+
+pubpriv_label = Label(
+    rsa_scr, font=("Arial", 10), text="Only fill one of public/private key."
+).place(relx=0.5, rely=0)
+
+# Declare our 4 notebooks.
+note_plaintext_rsa = ttk.Notebook(rsa_scr)
+note_plaintext_rsa.place(relx=0.4, rely=0.05, width=300, height=200)
+
+note_ciphtxt_rsa = ttk.Notebook(rsa_scr)
+note_ciphtxt_rsa.place(relx=0.7, rely=0.05, width=300, height=200)
+
+note_privkey_rsa = ttk.Notebook(rsa_scr)
+note_privkey_rsa.place(relx=0.4, rely=0.5, width=300, height=200)
+
+note_pubkey_rsa = ttk.Notebook(rsa_scr)
+note_pubkey_rsa.place(relx=0.7, rely=0.5, width=300, height=200)
+
+
+# Add frames to each notebook
+file_plaintext_rsa = Frame(note_plaintext_rsa, width=300, height=200)
+text_plaintext_rsa = Frame(note_plaintext_rsa, width=300, height=200)
+file_plaintext_rsa.pack(fill="both", expand=True)
+text_plaintext_rsa.pack(fill="both", expand=True)
+
+file_ciphtext_rsa = Frame(note_ciphtxt_rsa, width=300, height=200)
+text_ciphtext_rsa = Frame(note_ciphtxt_rsa, width=300, height=200)
+file_ciphtext_rsa.pack(fill="both", expand=True)
+text_ciphtext_rsa.pack(fill="both", expand=True)
+
+file_privkey_rsa = Frame(note_privkey_rsa, width=300, height=200)
+text_privkey_rsa = Frame(note_privkey_rsa, width=300, height=200)
+file_privkey_rsa.pack(fill="both", expand=True)
+text_privkey_rsa.pack(fill="both", expand=True)
+
+file_pubkey_rsa = Frame(note_pubkey_rsa, width=300, height=200)
+text_pubkey_rsa = Frame(note_pubkey_rsa, width=300, height=200)
+file_pubkey_rsa.pack(fill="both", expand=True)
+text_pubkey_rsa.pack(fill="both", expand=True)
+
+# Display tabs on each notebook
+note_plaintext_rsa.add(text_plaintext_rsa, text="Plaintext from text")
+note_plaintext_rsa.add(file_plaintext_rsa, text="Plaintext from file")
+
+note_ciphtxt_rsa.add(text_ciphtext_rsa, text="Ciphertext from text")
+note_ciphtxt_rsa.add(file_ciphtext_rsa, text="Ciphertext from file")
+
+note_privkey_rsa.add(text_privkey_rsa, text="Private key from text")
+note_privkey_rsa.add(file_privkey_rsa, text="Private key from file")
+
+note_pubkey_rsa.add(text_pubkey_rsa, text="Public key from text")
+note_pubkey_rsa.add(file_pubkey_rsa, text="Public key from file")
+
+
+# Encrypt/decrypt buttons
+rsa_encrypt = Button(
+    rsa_scr, height=2, width=20, text="Encrypt", command=lambda: get_file()
+).place(relx=0.6, y=600)
+rsa_decrypt = Button(
+    rsa_scr, height=2, width=20, text="Decrypt", command=lambda: func_rsa("decrypt")
+).place(relx=0.72, y=600)
+
+
+# From text options.
+plaintext_rsa = Text(text_plaintext_rsa, wrap=CHAR).pack(expand=True, fill=BOTH)
+ciphtext_rsa = Text(text_ciphtext_rsa, wrap=CHAR).pack(expand=True, fill=BOTH)
+privtext_rsa = Text(text_privkey_rsa, wrap=CHAR).pack(expand=True, fill=BOTH)
+pubtext_rsa = Text(text_pubkey_rsa, wrap=CHAR).pack(expand=True, fill=BOTH)
+
+
+# For each of the "from text" frames, we add a button to select a file and field for currently selected file.
+in_plainfile_rsa = StringVar()
+in_ciphfile_rsa = StringVar()
+in_privfile_rsa = StringVar()
+in_pubfile_rsa = StringVar()
+
+in_plainfile_rsa.set("No file selected.")
+in_ciphfile_rsa.set("No file selected.")
+in_privfile_rsa.set("No file selected.")
+in_pubfile_rsa.set("No file selected.")
+
+label_plainfile_rsa = Entry(file_plaintext_rsa, textvariable=in_plainfile_rsa).place(
+    relx=0, rely=0.2, relwidth=1
+)
+get_plainfile_rsa = Button(
+    file_plaintext_rsa, text="Choose file", command=lambda: get_file(in_plainfile_rsa)
+).place(relx=0.6, rely=0.5)
+
+label_ciphfile_rsa = Entry(file_ciphtext_rsa, textvariable=in_ciphfile_rsa).place(
+    relx=0, rely=0.2, relwidth=1
+)
+get_ciphfile_rsa = Button(
+    file_ciphtext_rsa, text="Choose file", command=lambda: get_file(in_ciphfile_rsa)
+).place(relx=0.6, rely=0.5)
+
+label_privfile_rsa = Entry(file_privkey_rsa, textvariable=in_privfile_rsa).place(
+    relx=0, rely=0.2, relwidth=1
+)
+get_privfile_rsa = Button(
+    file_privkey_rsa, text="Choose file", command=lambda: get_file(in_privfile_rsa)
+).place(relx=0.6, rely=0.5)
+
+label_pubfile_rsa = Entry(file_pubkey_rsa, textvariable=in_pubfile_rsa).place(
+    relx=0, rely=0.2, relwidth=1
+)
+get_pubfile_rsa = Button(
+    file_pubkey_rsa, text="Choose file", command=lambda: get_file(in_pubfile_rsa)
+).place(relx=0.6, rely=0.5)
 
 
 # Functions dealing with input call functions in other Python files
-def frequency_analysis_input():
+def func_frequency_analysis_input():
     input = freq_input.get("1.0", "end-1c")
     out = frequency_analysis.analyse_freq(input)
     freq_output.insert("1.0", out)
+
+
+def func_otp_input():
+    input = otp_input.get("1.0", "end-1c")
+    # Call OTP code here.
+    out = "hello"  # one-time pad output goes here
+    otp_output.insert("1.0", out)
+
+
+# Allow user to input a filepath from a textbox.
+
+
+# REQUIRED: enc_or_dec,
+def func_rsa(
+    enc_or_dec: str,
+    pub_or_privkey: str,
+    key_file: str,
+    text_in: str = None,
+    file_in: str = None,
+):
+
+    rsa_parse.rsa_parse()
+
+
+# This calls your OS's file manager to select the file and writes the filepath to appropriate text field
+def get_file(label: StringVar):
+    filename = filedialog.askopenfilename(
+        initialdir="/",
+        title="Select file",
+        filetypes=(
+            ("Pem files", "*.pem*"),
+            ("Pub files", "*.pub*"),
+            ("all files", "*.*"),
+        ),
+    )
+    label.set(filename)
+
+
+# Determine where we are taking input from and call accordingly.
 
 
 # Remember to add stuff to the frame or it wont display
