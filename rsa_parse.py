@@ -15,28 +15,21 @@ def rsa_parse(
 ):
     # If all key fields are empty, break and pop up error message.
     if enc_or_dec == "encrypt":
-        makeCall:bool = False
+        makeCall: bool = False
         key_to_use: str
         key_type: str
         to_encode_type: str
         to_encode: str
+        # Enforce encryption only using public key
         # If multiple, default to public key from file for encryption.
         if pub_key_file != "No file selected." or pub_key_file != "":
             key_to_use = pub_key_file
-            key_type = "public-key-file"
+            key_type = "--public-key-file"
             print(f"public key file: {priv_key_file}")
         elif pub_key_text != "":
             key_to_use = pub_key_text
-            key_type = "public-key-text"
+            key_type = "--public-key-text"
             print(f"public key text: {priv_key_text}")
-        elif priv_key_file != "No file selected." or priv_key_file != "":
-            key_to_use = priv_key_file
-            key_type = "private-key-file"
-            print(f"private key file: {priv_key_file}")
-        elif priv_key_text != "":
-            key_to_use = priv_key_text
-            key_type = "private-key-text"
-            print(f"private key text: {priv_key_text}")
         else:
             return "Need a key!"
 
@@ -56,14 +49,14 @@ def rsa_parse(
             to_encode_type = "--file"
             to_encode = plain_file
             print(f"plain_file = {plain_file}")
-
-        if(makeCall):
-        # Now, make the call to zig binary.
+            makeCall = True
+        if makeCall:
+            # Now, make the call to zig binary.
             subprocess.run(
                 [
                     "./zig-out/bin/rsa",
                     "encode",
-                    f"--{key_type}",
+                    key_type,
                     key_to_use,
                     to_encode_type,
                     to_encode,
@@ -75,6 +68,7 @@ def rsa_parse(
     elif enc_or_dec == "decrypt":
         # As before, prefer key files to manual entry
         # If no private key, decryption will not work.
+        makeCall: bool = False
         key_to_use: str
         key_type: str
         to_decode_type: str
@@ -94,28 +88,30 @@ def rsa_parse(
         if ((ciph_file != "No file selected.") or (ciph_file != "")) and (
             ciph_text != ""
         ):
-            print("have duplicate ciphertexts!")
-            return False
+            return "Cannot have duplicate ciphertexts!"
         elif ciph_text:
             to_decode_type = "--text"
             to_decode = ciph_text
+            makeCall = True
 
         else:  # We have a file
             to_decode_type = "--file"
             to_decode = ciph_file
+            makeCall = True
 
         # Now, make the call to zig binary.
-        subprocess.run(
-            [
-                "./zig-out/bin/rsa",
-                "decode",
-                f"--{key_type}",
-                key_to_use,
-                to_decode_type,
-                to_decode,
-            ]
-        )
-        return True
-
+        if makeCall:
+            subprocess.run(
+                [
+                    "./zig-out/bin/rsa",
+                    "decode",
+                    f"--{key_type}",
+                    key_to_use,
+                    to_decode_type,
+                    to_decode,
+                ]
+            )
+            return True
+        return "Need a ciphertext to decode!"
     else:
         return "Somehow, you didn't select encode or decode and the RSA function still ran...?"
