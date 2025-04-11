@@ -32,7 +32,7 @@ pub const ProcessedArgs = struct {
         var processed_args = ProcessedArgs{ .allocator = allocator };
 
         // ----- PARSE ARGS -----
-        var args = std.process.args();
+        var args = try std.process.argsWithAllocator(allocator);
         defer args.deinit();
         _ = args.skip(); // Skip binary executable name
 
