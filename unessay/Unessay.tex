@@ -1,0 +1,90 @@
+%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%% SETUP %%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[11pt]{article}
+
+% --- Multi-file ---
+\usepackage[subpreambles=true, sort=true]{standalone}
+\usepackage{import}
+
+% --- Bibtex ---
+\usepackage[ style=ieee ]{biblatex}
+\addbibresource{references.bib}
+
+% --- Pictures ---
+\usepackage{graphicx} % Pictures
+\usepackage{tikz}
+
+% --- Page Layout ---
+\usepackage{tabularx} % Advanced tables
+\usepackage{setspace} % Line spacing
+\usepackage[hidelinks]{hyperref} % Hyperlinks
+
+% Margins
+\usepackage[
+	left=2.0cm,
+	right=2.0cm,
+	top=2.0cm,
+	bottom=2.5cm,
+]{geometry}
+
+% Page text columns
+\usepackage{multicol}
+\setlength{\columnsep}{0.9cm}
+
+% Other setup
+\parindent 0pt
+\parskip 3mm
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%% DOCUMENT %%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+\raggedcolumns
+
+% ----- TITLE PAGE -----
+\import{}{title_page}
+
+
+% ----- MAIN DOCUMENT -----
+\begin{multicols}{2}
+	\begin{spacing}{1.125}
+		\tableofcontents
+
+		\section{Introduction}
+		TODO
+
+
+
+
+
+		% --- Contributions ---
+		\section{Contributions}
+		\subsection{Clark, James}
+		\begin{itemize}
+			\item Frequency Analysis
+		\end{itemize}
+		\subsection{Davies, Ethan}
+		\begin{itemize}
+			\item TODO
+		\end{itemize}
+		\subsection{Owen, Gwilym}
+		\begin{itemize}
+			\item One-Time-Pad
+		\end{itemize}
+		\subsection{Shiells Thomas, Isaac}
+		\begin{itemize}
+			\item RSAA
+		\end{itemize}
+
+		% --- References ---
+		\printbibliography
+
+	\end{spacing}
+\end{multicols}
+
+\end{document}
