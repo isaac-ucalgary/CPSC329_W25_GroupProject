@@ -1,3 +1,6 @@
+Cryptography secures virtually all digital communication today, yet its core concepts can seem abstract without hands‑on exploration. In this project, we present a unified toolkit that brings three cryptographic techniques to life: frequency analysis, RSA, and the one‑time pad. We will talk about how each tool works and why they are useful.
+
+
 Frequency analysis (James)
 
 The frequency analysis tool developed in this project is designed to deconstruct any given text by counting the occurrences of each character or symbol. Essentially, the tool converts raw text into a statistical distribution, revealing hidden patterns within the data. By iterating over every character in a string and maintaining a count of its occurrences using Python’s dictionary data structure, the tool generates a clear frequency profile. This profile is particularly valuable in the context of classic substitution ciphers, as certain letters—such as “E” in English—tend to appear more frequently than others. In ciphertext, such frequency patterns can guide cryptanalysts in making informed guesses about the correspondence between encrypted symbols and common letters in the target language, thereby aiding the decryption process.
