@@ -230,9 +230,19 @@ def getRsaBinaryPath() -> str | None:
         If a binary for the current system does not exist, returns `None`.
     """
     # Construct the path to the rsa binary for the current system
+
+    # Adding tweaks to make this handle 'amd64' (which is just x86_64 but named different because reasons)
+    machine_type: str = platform.machine().lower()
+    if machine_type == "amd64":
+        machine_type = "x86_64"
+
     path: str = (
-        f"{rsa_binary_base_path}/{platform.machine().lower()}-{platform.system().lower()}/{rsa_binary_name}"
+        f"{rsa_binary_base_path}/{machine_type}-{platform.system().lower()}/{rsa_binary_name}"
     )
+
+    # If on windows, append .exe to path
+    if platform.system().lower() == "windows":
+        path += ".exe"
 
     # If the path to the binary if it exists
     return path if os.path.exists(path) else None

@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
+import subprocess
 
 # This imports the frequency analysis and OTP files
 import frequency_analysis
@@ -9,6 +10,7 @@ import rsa_parse
 
 # import OTP here...
 
+NOFILESELECTED = "No file selected."
 
 # I had to learn tkinter in 3 days after the servers wouldn't let me run torch
 # This is some of the wost code I have ever written. I apologize to the person who has to read this.
@@ -107,13 +109,9 @@ rsa_label = Label(
     text="About:\nThis RSA tool, implemented in Zig, parses and formats both public and private keys based on well-known standards (RFC 4253 for public keys and RFC 8017 for private keys). It converts text messages into big integers and then uses modular exponentiation to perform encryption and decryption. Key functions include decoding keys from base64 or PEM formats, extracting components like exponents and moduli, and handling large-number arithmetic (such as computing multiplicative inverses via the extended Euclidean algorithm), all of which work together to securely transform data."
     + "RSA is very valuable for cryptography because it facilitates secure communication through the use of asymmetric key pairs—one key for encryption and a different one for decryption. The method relies on complex mathematical operations, particularly the difficulty of factoring the product of two large prime numbers, making it practically infeasible to reverse without the corresponding private key. This inherent challenge ensures that only those with the proper private key can decrypt and access the data. These properties make RSA a great for protecting data transmissions, verifying digital signatures, and supporting secure authentication protocols across various applications."
     + "\n\nTo use the RSA tool:\n"
-    + "[more detailed instructions for use go here.]",
+    + "Please ensure that only one of ",
 ).place(x=25, y=25)
 
-# Info labels
-pubpriv_label = Label(
-    rsa_scr, font=("Arial", 10), text="Only fill one of public/private key."
-).place(relx=0.5, rely=0)
 
 # Our field in the RSA window for messages and errors
 msg_label_rsa = Label(
@@ -134,10 +132,10 @@ note_ciphtxt_rsa = ttk.Notebook(rsa_scr)
 note_ciphtxt_rsa.place(relx=0.7, rely=0.05, width=300, height=200)
 
 note_privkey_rsa = ttk.Notebook(rsa_scr)
-note_privkey_rsa.place(relx=0.4, rely=0.5, width=300, height=200)
+note_privkey_rsa.place(relx=0.7, rely=0.5, width=300, height=200)
 
 note_pubkey_rsa = ttk.Notebook(rsa_scr)
-note_pubkey_rsa.place(relx=0.7, rely=0.5, width=300, height=200)
+note_pubkey_rsa.place(relx=0.4, rely=0.5, width=300, height=200)
 
 
 # Add frames to each notebook
@@ -195,10 +193,10 @@ in_ciphfile_rsa = StringVar()
 in_privfile_rsa = StringVar()
 in_pubfile_rsa = StringVar()
 
-in_plainfile_rsa.set("No file selected.")
-in_ciphfile_rsa.set("No file selected.")
-in_privfile_rsa.set("No file selected.")
-in_pubfile_rsa.set("No file selected.")
+in_plainfile_rsa.set(NOFILESELECTED)
+in_ciphfile_rsa.set(NOFILESELECTED)
+in_privfile_rsa.set(NOFILESELECTED)
+in_pubfile_rsa.set(NOFILESELECTED)
 
 label_plainfile_rsa = Entry(file_plaintext_rsa, textvariable=in_plainfile_rsa).place(
     relx=0, rely=0.2, relwidth=1
@@ -235,7 +233,7 @@ rsa_encrypt = Button(
     width=15,
     text="Encrypt",
     command=lambda: func_rsa(
-        "encrypt",
+        rsa_parse.RsaCommand.ENCRYPT,
     ),
 ).place(relx=0.55, y=300)
 rsa_decrypt = Button(
@@ -244,7 +242,7 @@ rsa_decrypt = Button(
     width=15,
     text="Decrypt",
     command=lambda: func_rsa(
-        "decrypt",
+        rsa_parse.RsaCommand.DECRYPT,
     ),
 ).place(relx=0.70, y=300)
 
@@ -268,7 +266,7 @@ def func_otp_input():
 
 # Wrapper that gets relevant information, then calls rsa_parse to do the heavy lifting.
 def func_rsa(
-    enc_or_dec: str,
+    enc_or_dec: rsa_parse.RsaCommand,
 ):
     # Get values for this function.
     pub_key_file: str = in_pubfile_rsa.get()
@@ -279,25 +277,80 @@ def func_rsa(
     plain_text: str = plaintext_rsa.get("1.0", "end-1c")
     ciph_file: str = in_ciphfile_rsa.get()
     ciph_text: str = ciphtext_rsa.get("1.0", "end-1c")
-    # Here, returned will be True if fn passed, or a string error message if there was a failure.
-    # HOW DO WE TAKE RETURNED OUTPUT FROM THE RSA FUNCTION?
-    returned = rsa_parse.rsa_parse(
-        enc_or_dec,
-        pub_key_file,
-        pub_key_text,
-        priv_key_file,
-        priv_key_text,
-        plain_file,
-        plain_text,
-        ciph_file,
-        ciph_text,
-    )
-    str_err_message_rsa.set(returned)
-    if str(returned) == "True":
-        print("RSA WORKED!!!!!!!!")
 
-    else:
-        print("There was an error in the rsa function!")
+    # Determine input from user
+    # Default to text inputs.
+    pub_key_type: rsa_parse.SourceType = rsa_parse.SourceType.TEXT
+    pub_key: str = pub_key_text
+    priv_key_type: rsa_parse.SourceType = rsa_parse.SourceType.TEXT
+    priv_key: str = priv_key_text
+    source_type: rsa_parse.SourceType = rsa_parse.SourceType.TEXT
+    source: str
+
+    # Wrap everything in a try block to send errors back to the user
+    try:
+        # Set variables and call function
+        # Set public key type
+        if pub_key_file != NOFILESELECTED and pub_key_file:
+            pub_key_type = rsa_parse.SourceType.FILE
+            pub_key = pub_key_file
+
+        # Set private key
+        if priv_key_file != NOFILESELECTED and priv_key_file:
+            priv_key_type = rsa_parse.SourceType.FILE
+            priv_key = priv_key_file
+
+        # Set source depending if we are encrypting or decrypting
+        source_type = rsa_parse.SourceType.TEXT  # Default
+        if enc_or_dec == rsa_parse.RsaCommand.ENCRYPT:
+            source = plain_text
+            if plain_file != NOFILESELECTED and plain_file:
+                source = plain_file
+        else:
+            source = ciph_text
+            if ciph_file != NOFILESELECTED and ciph_file:
+                source = ciph_file
+
+        returned = rsa_parse.rsa_parse(
+            enc_or_dec,
+            pub_key_type,
+            priv_key_type,
+            pub_key,
+            priv_key,
+            source_type,
+            source,
+        )
+
+        # Returned is an object that allows us to listen on either stdout or stderr
+        if returned.stdout:
+            output: str = returned.stdout
+            # Program ran
+            str_err_message_rsa.set("RSA Complete")
+            # Write
+            if enc_or_dec == rsa_parse.RsaCommand.ENCRYPT:
+                # We write to ciphertext field.
+                # Check if there is a file path to write to in ciphertext
+                if in_ciphfile_rsa != NOFILESELECTED and in_ciphfile_rsa:
+                    with open(in_ciphfile_rsa, "w") as f:
+                        f.write(output)
+                # Otherwise, write to text field.
+                else:
+                    in_ciphtext_rsa.set(output)
+            else:
+                # We write to plaintext field.
+                # Check if there is a file path to write to in plaintext
+                if in_plainfile_rsa != NOFILESELECTED and in_plainfile_rsa:
+                    with open(in_plainfile_rsa, "w") as f:
+                        f.write(output)
+                # Otherwise, write to text field
+                else:
+                    in_plaintext_rsa.set(output)
+        else:
+            # There was an error on stderr
+            str_err_message_rsa.set(returned.stderr)
+
+    except Exception as e:
+        str_err_message_rsa.set(e)
 
 
 # This calls your OS's file manager to select the file and writes the filepath to appropriate text field
@@ -312,7 +365,7 @@ def get_file(label: StringVar):
             ("all files", "*.*"),
         ),
     )
-    return filename
+    label.set(filename)
 
 
 root.mainloop()
