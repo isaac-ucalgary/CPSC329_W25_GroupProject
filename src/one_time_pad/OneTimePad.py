@@ -71,20 +71,21 @@ class LetterCodes:
         return "".join([c for c in input_string if c in LetterCodes.lettercodes])
 
 
-def textPad(string optype):
+def textPad(string optype, string text, string key):
     #optype: str = ""
     #while not optype.lower() in ["q", "d", "e"]:
         #optype = input("Would you like to encode(e) or decode(d) or quit(q)")
 
     if optype == "e":
-        temp: str = input("Please enter the message you want to send: ").lower()
-        plaintext: str = LetterCodes.filter(temp)
+        #temp: str = input("Please enter the message you want to send: ").lower()
+        #plaintext: str = LetterCodes.filter(temp)
+        plaintext: str = text;
         # Message text is now trimmed to usable characters
 
-        temp = input(
-            "Please enter the one time pad you want to use, or leave this blank to generate one: "
-        )
-        onetime: str = LetterCodes.filter(temp)
+        #temp = input(
+        #    "Please enter the one time pad you want to use, or leave this blank to generate one: "
+        #)
+        onetime: str = key
 
         # If the one time pad is blank or invalid, generate one
         if onetime == "":
@@ -105,18 +106,20 @@ def textPad(string optype):
         textPad()
 
     elif optype == "d":
-        temp = input("Please enter the ciphertext: ").lower()
-        ciphertext = LetterCodes.filter(temp)
+        #temp = input("Please enter the ciphertext: ").lower()
+        #ciphertext = LetterCodes.filter(temp)
+        ciphertext = text
         # Message text is now trimmed to usable characters
 
-        temp = input("Please enter the one time pad you want to use: ")
-        onetime = LetterCodes.filter(temp)
+        #temp = input("Please enter the one time pad you want to use: ")
+        #onetime = LetterCodes.filter(temp)
+        onetime = key
         # Decoding time
         plaintext = LetterCodes.shiftString(ciphertext, onetime, reverse=True)
 
         # output
         print(f"Plaintext is: {plaintext}")
-        textPad()
+        #textPad()
 
 
 def digitalEnter(prompt: str, rand_if_empty_length: int = -1) -> tuple[str, str, int]:
