@@ -71,10 +71,10 @@ class LetterCodes:
         return "".join([c for c in input_string if c in LetterCodes.lettercodes])
 
 
-def textPad():
-    optype: str = ""
-    while not optype.lower() in ["q", "d", "e"]:
-        optype = input("Would you like to encode(e) or decode(d) or quit(q)")
+def textPad(string optype):
+    #optype: str = ""
+    #while not optype.lower() in ["q", "d", "e"]:
+        #optype = input("Would you like to encode(e) or decode(d) or quit(q)")
 
     if optype == "e":
         temp: str = input("Please enter the message you want to send: ").lower()
@@ -173,8 +173,8 @@ def digitalEnter(prompt: str, rand_if_empty_length: int = -1) -> tuple[str, str,
     return base_type, temp, unciphered
 
 
-def digitalPad():
-    optype = input("Would you like to encode(e) or decode(d) or quit(q)? ")
+def digitalPad(string optype):
+    #optype = input("Would you like to encode(e) or decode(d) or quit(q)? ")
 
     # Select the appropriate prompt message an output text type depending on the operation
     text_prompt: str
