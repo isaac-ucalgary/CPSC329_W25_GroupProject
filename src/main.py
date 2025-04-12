@@ -10,8 +10,6 @@ import rsa_parse
 
 # import OTP here...
 
-NOFILESELECTED = "No file selected."
-
 # I had to learn tkinter in 3 days after the servers wouldn't let me run torch
 # This is some of the wost code I have ever written. I apologize to the person who has to read this.
 # Also my apologies to whoever finds this on Isaac's github - he didn't write this abomination of procedural bloat.
@@ -174,9 +172,6 @@ note_pubkey_rsa.add(file_pubkey_rsa, text="Public key from file")
 
 
 # From text options.
-in_plaintext_rsa = StringVar()
-in_ciphtext_rsa = StringVar()
-
 plaintext_rsa = Text(text_plaintext_rsa, wrap=CHAR)
 plaintext_rsa.pack(expand=True, fill=BOTH)
 ciphtext_rsa = Text(text_ciphtext_rsa, wrap=CHAR)
@@ -192,11 +187,6 @@ in_plainfile_rsa = StringVar()
 in_ciphfile_rsa = StringVar()
 in_privfile_rsa = StringVar()
 in_pubfile_rsa = StringVar()
-
-in_plainfile_rsa.set(NOFILESELECTED)
-in_ciphfile_rsa.set(NOFILESELECTED)
-in_privfile_rsa.set(NOFILESELECTED)
-in_pubfile_rsa.set(NOFILESELECTED)
 
 label_plainfile_rsa = Entry(file_plaintext_rsa, textvariable=in_plainfile_rsa).place(
     relx=0, rely=0.2, relwidth=1
@@ -291,12 +281,12 @@ def func_rsa(
     try:
         # Set variables and call function
         # Set public key type
-        if pub_key_file != NOFILESELECTED and pub_key_file:
+        if pub_key_file:
             pub_key_type = rsa_parse.SourceType.FILE
             pub_key = pub_key_file
 
         # Set private key
-        if priv_key_file != NOFILESELECTED and priv_key_file:
+        if priv_key_file:
             priv_key_type = rsa_parse.SourceType.FILE
             priv_key = priv_key_file
 
@@ -304,11 +294,11 @@ def func_rsa(
         source_type = rsa_parse.SourceType.TEXT  # Default
         if enc_or_dec == rsa_parse.RsaCommand.ENCRYPT:
             source = plain_text
-            if plain_file != NOFILESELECTED and plain_file:
+            if plain_file:
                 source = plain_file
         else:
             source = ciph_text
-            if ciph_file != NOFILESELECTED and ciph_file:
+            if ciph_file:
                 source = ciph_file
 
         returned = rsa_parse.rsa_parse(
@@ -323,28 +313,28 @@ def func_rsa(
 
         # Returned is an object that allows us to listen on either stdout or stderr
         if returned.stdout:
-            output: str = returned.stdout
+            output: str = str(returned.stdout)
             # Program ran
             str_err_message_rsa.set("RSA Complete")
             # Write
             if enc_or_dec == rsa_parse.RsaCommand.ENCRYPT:
                 # We write to ciphertext field.
-                # Check if there is a file path to write to in ciphertext
-                if in_ciphfile_rsa != NOFILESELECTED and in_ciphfile_rsa:
-                    with open(in_ciphfile_rsa, "w") as f:
+                ciphtext_rsa.delete("1.0", "end")
+                ciphtext_rsa.insert("1.0", output)
+                # Then, check if there is a file path to write to in ciphertext
+                if in_ciphfile_rsa.get():
+                    with open(str(in_ciphfile_rsa), "w") as f:
                         f.write(output)
-                # Otherwise, write to text field.
-                else:
-                    in_ciphtext_rsa.set(output)
+
             else:
                 # We write to plaintext field.
                 # Check if there is a file path to write to in plaintext
-                if in_plainfile_rsa != NOFILESELECTED and in_plainfile_rsa:
+                plaintext_rsa.delete("1.0", "end")
+                plaintext_rsa.insert("1.0", output)
+                if in_plainfile_rsa.get():
                     with open(in_plainfile_rsa, "w") as f:
                         f.write(output)
-                # Otherwise, write to text field
-                else:
-                    in_plaintext_rsa.set(output)
+
         else:
             # There was an error on stderr
             str_err_message_rsa.set(returned.stderr)
