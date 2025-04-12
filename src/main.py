@@ -109,7 +109,7 @@ rsa_label = Label(
     text="About:\nThis RSA tool, implemented in Zig, parses and formats both public and private keys based on well-known standards (RFC 4253 for public keys and RFC 8017 for private keys). It converts text messages into big integers and then uses modular exponentiation to perform encryption and decryption. Key functions include decoding keys from base64 or PEM formats, extracting components like exponents and moduli, and handling large-number arithmetic (such as computing multiplicative inverses via the extended Euclidean algorithm), all of which work together to securely transform data."
     + "RSA is very valuable for cryptography because it facilitates secure communication through the use of asymmetric key pairs—one key for encryption and a different one for decryption. The method relies on complex mathematical operations, particularly the difficulty of factoring the product of two large prime numbers, making it practically infeasible to reverse without the corresponding private key. This inherent challenge ensures that only those with the proper private key can decrypt and access the data. These properties make RSA a great for protecting data transmissions, verifying digital signatures, and supporting secure authentication protocols across various applications."
     + "\n\nTo use the RSA tool:\n"
-    + "Please ensure that only one of ",
+    + "Public key is used for encryption, private key for decryption. Please ensure that either Plaintext and Public key, OR Ciphertext and Private key are filled. IF THERE IS A FILEPATH IN THE OUTPUT FIELD, ANY FILE AT THAT PATH WILL BE OVERWRITTEN, and any text in the relevant output field may also be overwtritten. By default, the program looks for files. There are pre-generated key pairs in the folder /src/rsa/rsa_test_keys, or you can bring your own (as long as they follow the RFC-8017 standard)",
 ).place(x=25, y=25)
 
 
@@ -353,7 +353,7 @@ def func_rsa(
         str_err_message_rsa.set(e)
 
 
-# This calls your OS's file manager to select the file and writes the filepath to appropriate text field
+# Call OS's file manager to select the file and writes the filepath to appropriate text field
 def get_file(label: StringVar):
     filename = filedialog.askopenfilename(
         initialdir="/",
