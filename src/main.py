@@ -3,6 +3,7 @@ from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
 import subprocess
+import os
 
 # This imports the frequency analysis and OTP files
 import frequency_analysis
@@ -346,7 +347,7 @@ def func_rsa(
 # Call OS's file manager to select the file and writes the filepath to appropriate text field
 def get_file(label: StringVar):
     filename = filedialog.askopenfilename(
-        initialdir="/",
+        initialdir=os.getcwd(),
         title="Select file",
         filetypes=(
             ("Pem files", "*.pem*"),
