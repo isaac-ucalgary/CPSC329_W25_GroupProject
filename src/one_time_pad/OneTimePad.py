@@ -175,17 +175,9 @@ def digitalEnter(prompt: str, rand_if_empty_length: int = -1) -> tuple[str, str,
             break
 
     return base_type, temp, unciphered
-#generate a random key  where len is teh length of the text input and base is the base its in
-#for a decimal input get len(bin(input))-2 , base 2
-def randBinKey(int len, int base):
-    if base == 8:
-        len = len*4
-    if base == 16:
-        len = len*8
-    rand_bits: int = random.getrandbits(len)
-    return rand_bits
+    
 # base is the base of the message, num is the message, baseo is the base of the key and key is the key.
-def digitalPad(int base,int num, int baseo ,int key):
+def digitalPad(int base,string num, int baseo ,string key):
     #optype = input("Would you like to encode(e) or decode(d) or quit(q)? ")
 
     # Select the appropriate prompt message an output text type depending on the operation
@@ -209,7 +201,18 @@ def digitalPad(int base,int num, int baseo ,int key):
             #rand_if_empty_length=(len(bin(text)) - 2),
         #)
         text = int(num, base)
-        onetime = int(key, baseo)
+        if key=="":
+            mlen = len(num)
+            if base == 8:
+                mlen = mlen*3
+            elif base == 16:
+                mlen = mlen*4
+            elif base == 10:
+                mlen = len(bin(text))-2
+            rand_bits: int = random.getrandbits(len)
+            onetime = rand_bits
+        else:
+            onetime = int(key, baseo)
 
         # Encode/Decode
         bits = text ^ onetime
