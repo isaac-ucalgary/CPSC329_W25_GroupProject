@@ -176,7 +176,13 @@ def digitalEnter(prompt: str, rand_if_empty_length: int = -1) -> tuple[str, str,
 
     return base_type, temp, unciphered
 
-
+def randBinKey(int len, int base):
+    if base == 8:
+        len = len*4
+    if base == 16:
+        len = len*8
+    rand_bits: int = random.getrandbits(len)
+    return rand_bits
 def digitalPad(int base,int num, int baseo ,int onet):
     #optype = input("Would you like to encode(e) or decode(d) or quit(q)? ")
 
