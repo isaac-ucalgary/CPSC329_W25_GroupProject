@@ -70,7 +70,7 @@ class LetterCodes:
     def filter(input_string: str) -> str:
         return "".join([c for c in input_string if c in LetterCodes.lettercodes])
 
-
+# optype is "e" or "d" for encode or decode, text is the message and key is the key
 def textPad(string optype, string text, string key):
     
     #optype: str = ""
@@ -175,7 +175,8 @@ def digitalEnter(prompt: str, rand_if_empty_length: int = -1) -> tuple[str, str,
             break
 
     return base_type, temp, unciphered
-
+#generate a random key  where len is teh length of the text input and base is the base its in
+#for a decimal input get len(bin(input))-2 , base 2
 def randBinKey(int len, int base):
     if base == 8:
         len = len*4
@@ -183,7 +184,8 @@ def randBinKey(int len, int base):
         len = len*8
     rand_bits: int = random.getrandbits(len)
     return rand_bits
-def digitalPad(int base,int num, int baseo ,int onet):
+# base is the base of the message, num is the message, baseo is the base of the key and key is the key.
+def digitalPad(int base,int num, int baseo ,int key):
     #optype = input("Would you like to encode(e) or decode(d) or quit(q)? ")
 
     # Select the appropriate prompt message an output text type depending on the operation
@@ -207,7 +209,7 @@ def digitalPad(int base,int num, int baseo ,int onet):
             #rand_if_empty_length=(len(bin(text)) - 2),
         #)
         text = int(num, base)
-        onetime = int(onet, baseo)
+        onetime = int(key, baseo)
 
         # Encode/Decode
         bits = text ^ onetime
