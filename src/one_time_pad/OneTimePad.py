@@ -72,6 +72,7 @@ class LetterCodes:
 
 
 def textPad(string optype, string text, string key):
+    
     #optype: str = ""
     #while not optype.lower() in ["q", "d", "e"]:
         #optype = input("Would you like to encode(e) or decode(d) or quit(q)")
@@ -102,8 +103,9 @@ def textPad(string optype, string text, string key):
         ciphertext: str = LetterCodes.shiftString(plaintext, onetime)
 
         # Output
-        print(f"Ciphertext is: {ciphertext}\nOne time pad is: {onetime}")
-        textPad()
+        #print(f"Ciphertext is: {ciphertext}\nOne time pad is: {onetime}")
+        #textPad()
+        return ciphertext,onetime
 
     elif optype == "d":
         #temp = input("Please enter the ciphertext: ").lower()
@@ -116,9 +118,9 @@ def textPad(string optype, string text, string key):
         onetime = key
         # Decoding time
         plaintext = LetterCodes.shiftString(ciphertext, onetime, reverse=True)
-
+        return plaintext
         # output
-        print(f"Plaintext is: {plaintext}")
+        #print(f"Plaintext is: {plaintext}")
         #textPad()
 
 
