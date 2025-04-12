@@ -209,7 +209,7 @@ def digitalPad(int base,string num, int baseo ,string key):
                 mlen = mlen*4
             elif base == 10:
                 mlen = len(bin(text))-2
-            rand_bits: int = random.getrandbits(len)
+            rand_bits: int = random.getrandbits(mlen)
             onetime = rand_bits
         else:
             onetime = int(key, baseo)
