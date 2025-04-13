@@ -96,8 +96,8 @@ def textPad(optype: str, text: str, key: str):
 
         # THIS VIOLATES A CONDITION FOR PERFECT SECRECY!!!! DO NOT DO THIS!!!
         # if its valid but too short, loop it until its long enough
-        while len(onetime) < len(plaintext):
-            onetime += onetime
+        if len(onetime) < len(plaintext):
+            return plaintext, "This One-Time-Pad is too short to be cryptographically secure"
 
         # Encoding time
         ciphertext: str = LetterCodes.shiftString(plaintext, onetime)
