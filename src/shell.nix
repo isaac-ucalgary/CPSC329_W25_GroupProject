@@ -11,6 +11,7 @@ let
 in
   pkgs.mkShell {
     packages = with pkgs; [
+      zip
       (python.withPackages (
         python-pkgs:
           with python-pkgs; [

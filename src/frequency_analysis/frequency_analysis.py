@@ -2,9 +2,9 @@
 # we can wrap this with file i/o and other options later, if needed.
 # But, we can just call it with a string the user puts in a textbox on the web frontend
 # This will return ???
-def analyse_freq(string):
-    out = ""
-    frequencies = {}
+def analyse_freq(string: str):
+    out: str = ""
+    frequencies: dict[str, int] = {}
     # Add and increment a letter in the dictionary. Will work for any recognized letter
     for s in string:
         if s in frequencies:
