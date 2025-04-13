@@ -498,11 +498,8 @@ class RsaPage:
         self.file_ciphtext_rsa: tk.Frame = tk.Frame(
             self.note_ciphtxt_rsa, width=300, height=200
         )
-        self.text_ciphtext_rsa: tk.Frame = tk.Frame(
-            self.note_ciphtxt_rsa, width=300, height=200
-        )
+
         self.file_ciphtext_rsa.pack(fill="both", expand=True)
-        self.text_ciphtext_rsa.pack(fill="both", expand=True)
 
         self.file_privkey_rsa: tk.Frame = tk.Frame(
             self.note_privkey_rsa, width=300, height=200
@@ -526,7 +523,6 @@ class RsaPage:
         self.note_plaintext_rsa.add(self.text_plaintext_rsa, text="Plaintext from text")
         self.note_plaintext_rsa.add(self.file_plaintext_rsa, text="Plaintext from file")
 
-        self.note_ciphtxt_rsa.add(self.text_ciphtext_rsa, text="Ciphertext from text")
         self.note_ciphtxt_rsa.add(self.file_ciphtext_rsa, text="Ciphertext from file")
 
         self.note_privkey_rsa.add(self.text_privkey_rsa, text="Private key from text")
@@ -538,8 +534,6 @@ class RsaPage:
         # From text options.
         self.plaintext_rsa: tk.Text = tk.Text(self.text_plaintext_rsa, wrap=tk.CHAR)
         self.plaintext_rsa.pack(expand=True, fill=tk.BOTH)
-        self.ciphtext_rsa: tk.Text = tk.Text(self.text_ciphtext_rsa, wrap=tk.CHAR)
-        self.ciphtext_rsa.pack(expand=True, fill=tk.BOTH)
         self.privtext_rsa: tk.Text = tk.Text(self.text_privkey_rsa, wrap=tk.CHAR)
         self.privtext_rsa.pack(expand=True, fill=tk.BOTH)
         self.pubtext_rsa: tk.Text = tk.Text(self.text_pubkey_rsa, wrap=tk.CHAR)
