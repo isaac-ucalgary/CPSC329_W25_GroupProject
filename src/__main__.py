@@ -364,14 +364,22 @@ class OneTimePadPage:
         if self.otp_padtype.get() == "textpad":
             # Text pad
             optype: str = self.otp_encordec.get()
-            ret1, ret2 = OneTimePad.textPad(optype, message, key)
+            if optype == "e":
+                ret1, ret2 = OneTimePad.textPad(optype, message, key)
+                self.otp_key.delete("1.0", "end")
+                self.otp_key.insert("1.0", ret2)
+            else:
+                ret1 = OneTimePad.textPad(optype, message, key)
+
+            self.otp_output.delete("1.0", "end")
+            self.otp_output.insert("1.0", ret1)
+
         else:
             # Digital pad
             # Get inputs from user on format of their number inputs
             base: int = int(self.otp_text_numtype.get())
             keybase: int = int(self.otp_key_numtype.get())
             # Get input type
-            print(f"base {base}, keybase, {keybase}")
             inttexttype = int(self.otp_text_numtype.get())
             intkeytype = int(self.otp_key_numtype.get())
             if inttexttype == 2:
@@ -394,27 +402,25 @@ class OneTimePadPage:
                 # Hex
                 key = "0x" + key
             ret1, ret2 = OneTimePad.digitalPad(base, message, keybase, key)
+            if self.otp_returntype == "binary":
+                ret1 = bin(ret1)
+            elif self.otp_returntype == "hex":
+                ret1 = hex(ret1)
+            else:
+                ret1 = "Binary:" + bin(ret1) + "\nHex:" + hex(ret1)
+            self.otp_output.delete("1.0", "end")
+
+            self.otp_output.insert("1.0", ret1)
+            if key == "":
+                self.otp_key.delete("1.0", "end")
+                if intkeytype == 2:
+                    ret2 = bin(ret2)
+                elif intkeytype == 8:
+                    ret2 = oct(ret2)
+                elif intkeytype == 16:
+                    ret2 = hex(ret2)
+                self.otp_key.insert("1.0", ret2)
         # Then, set output to appropriate box(es) based on user input
-        self.otp_output.delete("1.0", "end")
-
-        if self.otp_returntype == "binary":
-            ret1 = bin(ret1)
-        elif self.otp_returntype == "hex":
-            ret1 = hex(ret1)
-        else:
-            ret1 = "Binary:" + bin(ret1) + "\nHex:" + hex(ret1)
-
-        self.otp_output.insert("1.0", ret1)
-        if key != "":
-            self.otp_key.delete("1.0", "end")
-            if intkeytype == 2:
-                ret2 = bin(ret2)
-            elif intkeytype == 8:
-                ret2 = oct(ret2)
-            elif intkeytype == 16:
-                ret2 = hex(ret2)
-            self.otp_key.insert("1.0", ret2)
-        print(f"base {base}, input {message}, keybase {keybase}, key {key}")
 
 
 class RsaPage:
