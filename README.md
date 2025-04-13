@@ -15,17 +15,8 @@ and Privacy*.
 
 ## Installation
 
-### Linux
-
-TODO
-
-### Windows
-
-TODO
-
-### MacOS
-
-TODO
+Navigate to the `src` directory.
+Run `python3 __main__.py`.
 
 ## Authors
 
@@ -33,4 +24,3 @@ Clark, James
 Davies, Ethan
 Owen, Gwilym
 Shiells Thomas, Isaac
-
