@@ -70,21 +70,22 @@ class LetterCodes:
     def filter(input_string: str) -> str:
         return "".join([c for c in input_string if c in LetterCodes.lettercodes])
 
+
 # optype is "e" or "d" for encode or decode, text is the message and key is the key
-def textPad(string optype, string text, string key):
-    
-    #optype: str = ""
-    #while not optype.lower() in ["q", "d", "e"]:
-        #optype = input("Would you like to encode(e) or decode(d) or quit(q)")
+def textPad(optype: str, text: str, key: str):
+
+    # optype: str = ""
+    # while not optype.lower() in ["q", "d", "e"]:
+    # optype = input("Would you like to encode(e) or decode(d) or quit(q)")
 
     if optype == "e":
-        #temp: str = input("Please enter the message you want to send: ").lower()
+        # temp: str = input("Please enter the message you want to send: ").lower()
         plaintext: str = LetterCodes.filter(text)
         # Message text is now trimmed to usable characters
 
-        #temp = input(
+        # temp = input(
         #    "Please enter the one time pad you want to use, or leave this blank to generate one: "
-        #)
+        # )
         onetime: str = LetterCodes.filter(text)
 
         # If the one time pad is blank or invalid, generate one
@@ -102,25 +103,25 @@ def textPad(string optype, string text, string key):
         ciphertext: str = LetterCodes.shiftString(plaintext, onetime)
 
         # Output
-        #print(f"Ciphertext is: {ciphertext}\nOne time pad is: {onetime}")
-        #textPad()
-        return ciphertext,onetime
+        # print(f"Ciphertext is: {ciphertext}\nOne time pad is: {onetime}")
+        # textPad()
+        return ciphertext, onetime
 
     elif optype == "d":
-        #temp = input("Please enter the ciphertext: ").lower()
-        #ciphertext = LetterCodes.filter(temp)
+        # temp = input("Please enter the ciphertext: ").lower()
+        # ciphertext = LetterCodes.filter(temp)
         ciphertext = text
         # Message text is now trimmed to usable characters
 
-        #temp = input("Please enter the one time pad you want to use: ")
-        #onetime = LetterCodes.filter(temp)
+        # temp = input("Please enter the one time pad you want to use: ")
+        # onetime = LetterCodes.filter(temp)
         onetime = key
         # Decoding time
         plaintext = LetterCodes.shiftString(ciphertext, onetime, reverse=True)
         return plaintext
         # output
-        #print(f"Plaintext is: {plaintext}")
-        #textPad()
+        # print(f"Plaintext is: {plaintext}")
+        # textPad()
 
 
 def digitalEnter(prompt: str, rand_if_empty_length: int = -1) -> tuple[str, str, int]:
@@ -175,69 +176,70 @@ def digitalEnter(prompt: str, rand_if_empty_length: int = -1) -> tuple[str, str,
             break
 
     return base_type, temp, unciphered
-    
+
+
 # base is the base of the message, num is the message, baseo is the base of the key and key is the key.
-def digitalPad(int base,string num, int baseo ,string key):
-    #optype = input("Would you like to encode(e) or decode(d) or quit(q)? ")
+def digitalPad(base: int, num: str, baseo: int, key: str):
+    # optype = input("Would you like to encode(e) or decode(d) or quit(q)? ")
 
     # Select the appropriate prompt message an output text type depending on the operation
-    #text_prompt: str
-    #text_generated: str
-    #match optype:
-        #case "e":
-            #text_prompt = "Please enter the message."
-            #text_generated = "Ciphertext"
-        #case "d":
-            #text_prompt = "Please enter the ciphertext."
-            #text_generated = "Plaintext"
-        #case _:
-            #text_prompt = ""
-            #text_generated = ""
+    # text_prompt: str
+    # text_generated: str
+    # match optype:
+    # case "e":
+    # text_prompt = "Please enter the message."
+    # text_generated = "Ciphertext"
+    # case "d":
+    # text_prompt = "Please enter the ciphertext."
+    # text_generated = "Plaintext"
+    # case _:
+    # text_prompt = ""
+    # text_generated = ""
 
-    #if optype in ["e", "d"]:
-        #text_type, text_raw, text = digitalEnter(text_prompt)
-        #_, _, onetime = digitalEnter(
-            #"Please enter the key to use or leave it  blank to generate one.",
-            #rand_if_empty_length=(len(bin(text)) - 2),
-        #)
-        text = int(num, base)
-        if key=="":
-            mlen = len(num)
-            if base == 8:
-                mlen = mlen*3
-            elif base == 16:
-                mlen = mlen*4
-            elif base == 10:
-                mlen = len(bin(text))-2
-            rand_bits: int = random.getrandbits(mlen)
-            onetime = rand_bits
-        else:
-            onetime = int(key, baseo)
+    # if optype in ["e", "d"]:
+    # text_type, text_raw, text = digitalEnter(text_prompt)
+    # _, _, onetime = digitalEnter(
+    # "Please enter the key to use or leave it  blank to generate one.",
+    # rand_if_empty_length=(len(bin(text)) - 2),
+    # )
+    text = int(num, base)
+    if key == "":
+        mlen = len(num)
+        if base == 8:
+            mlen = mlen * 3
+        elif base == 16:
+            mlen = mlen * 4
+        elif base == 10:
+            mlen = len(bin(text)) - 2
+        rand_bits: int = random.getrandbits(mlen)
+        onetime = rand_bits
+    else:
+        onetime = int(key, baseo)
 
-        # Encode/Decode
-        bits = text ^ onetime
-        #print(bin(bits)[2:].zfill(16))
+    # Encode/Decode
+    bits = text ^ onetime
+    # print(bin(bits)[2:].zfill(16))
 
-        # Output
-        #length = len(text_raw * (1 if text_type == "b" else 4))
+    # Output
+    # length = len(text_raw * (1 if text_type == "b" else 4))
 
-        return bits, onetime
-        #print(
-            #f"{text_generated} in binary: {bin(bits)[2:].zfill(length)}"
-            #+ f"\nOne time pad in binary: {bin(onetime)[2:].zfill(length)}"
-            #+ f"\n{text_generated} in Hex: {hex(bits)[2:]}"
-            #+ f"\nOne time pad in hex: {hex(onetime)[2:]}"
-        #)
+    return bits, onetime
+    # print(
+    # f"{text_generated} in binary: {bin(bits)[2:].zfill(length)}"
+    # + f"\nOne time pad in binary: {bin(onetime)[2:].zfill(length)}"
+    # + f"\n{text_generated} in Hex: {hex(bits)[2:]}"
+    # + f"\nOne time pad in hex: {hex(onetime)[2:]}"
+    # )
 
-        # loop /exit
-        #digitalPad()
+    # loop /exit
+    # digitalPad()
 
 
 def OTPmain():
     print("A one time pad //DESC HERE//")
     choice = ""
     while not choice.lower() in ["t", "d", "e"]:
-        choice = input("Text or digital? (t for text, d for digital e for exit")
+        choice = input("Text or digital? (t for text, d for digital e for exit)")
     if choice == "t":
         # descriptive paragraph only happens once, then go to the actual program
         print("This is the first iteration of a one-time pad //DESC HERE")
@@ -248,6 +250,3 @@ def OTPmain():
         digitalPad()
     else:
         print("Exiting")
-
-
-OTPmain()

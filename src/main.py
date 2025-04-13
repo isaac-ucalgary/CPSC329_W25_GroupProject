@@ -12,6 +12,7 @@ import rsa_parse
 
 # ----- LOCAL IMPORTS -----
 from frequency_analysis import frequency_analysis
+from one_time_pad import OneTimePad
 
 # import OTP here...
 
@@ -107,10 +108,10 @@ class HomePage:
             wraplength="400",
             text="""
             This cryptography tool was developed for the CPSC 329 Final Project, by Group 5:
+                James Clark
                 Ethan Davies
                 Gwilym Owen
                 Isaac Shiells Thomas
-                James Clark
 
             It implements a frequency analysis tool, a one-time pad tool, and RSA encryption and decryption.
                 """,
@@ -189,7 +190,7 @@ class OneTimePadPage:
                     "only characters from a predefined lettercodes list, then either accepts a ",
                     "user‑provided pad or generates a truly random pad of equal length (repeating it ",
                     "if necessary). Encryption maps each character to its index in lettercodes, adds ",
-                    "the corresponding pad index modulo 26, and converts the result back to a ",
+                    "the corresponding pad index modulo 36, and converts the result back to a ",
                     "character; decryption subtracts the pad index instead of adding it. In digital ",
                     "mode, the tool auto‑detects whether the input is binary or hexadecimal, parses ",
                     "it into an integer, and similarly accepts or generates a random key of matching ",
@@ -209,26 +210,211 @@ class OneTimePadPage:
                 ]
             ),
         )
-        self.otp_input: tk.Text = tk.Text(self.frame, height=10, width=40)
-        self.otp_output: tk.Text = tk.Text(self.frame, height=10, width=40)
-        self.otp_button: tk.Button = tk.Button(
-            self.frame,
+        self.label1_otp: tk.Label = tk.Label(
+            frame, font=("Arial", 10), text="Select OTP implementation:"
+        )
+
+        self.otp_padtype = tk.StringVar()
+        self.otp_padtype.set("textpad")
+        textPad_button = tk.Radiobutton(
+            frame, text="Text Pad", variable=self.otp_padtype, value="textpad"
+        )
+        textPad_button.place(relx=0.4, rely=0.1)
+        digPad_button = tk.Radiobutton(
+            frame, text="Digital Pad", variable=self.otp_padtype, value="digitalpad"
+        )
+        digPad_button.place(relx=0.4, rely=0.13)
+
+        label2_otp = tk.Label(
+            frame,
+            font=("Arial", 10),
+            text="(Digital pad) Select the number format of your input:",
+        )
+
+        # Number type of text
+        self.otp_text_numtype = tk.StringVar()
+        otp_binary_button = tk.Radiobutton(
+            frame, text="Binary", variable=self.otp_text_numtype, value="2"
+        )
+        otp_octal_button = tk.Radiobutton(
+            frame, text="Octal", variable=self.otp_text_numtype, value="8"
+        )
+        otp_decimal_button = tk.Radiobutton(
+            frame, text="Decimal", variable=self.otp_text_numtype, value="10"
+        )
+        otp_hex_button = tk.Radiobutton(
+            frame, text="Hex", variable=self.otp_text_numtype, value="16"
+        )
+
+        # Number type of key
+        label3_otp = tk.Label(
+            frame,
+            font=("Arial", 10),
+            text="(Digital pad) Select the number format of your key:",
+            anchor="w",
+        )
+        self.otp_key_numtype = tk.StringVar()
+        otp_key_button_none = tk.Radiobutton(
+            frame, text="No key input", variable=self.otp_key_numtype, value="0"
+        )
+        otp_binary_key_button = tk.Radiobutton(
+            frame, text="Binary", variable=self.otp_key_numtype, value="2"
+        )
+        otp_octal_key_button = tk.Radiobutton(
+            frame, text="Octal", variable=self.otp_key_numtype, value="8"
+        )
+        otp_decimal_key_button = tk.Radiobutton(
+            frame, text="Decimal", variable=self.otp_key_numtype, value="10"
+        )
+        otp_hex_key_button = tk.Radiobutton(
+            frame, text="Hex", variable=self.otp_key_numtype, value="16"
+        )
+
+        self.otp_returntype = tk.StringVar()
+        otp_return_bin = tk.Radiobutton(
+            frame, text="Binary", variable=self.otp_returntype, value="binary"
+        )
+        otp_return_hex = tk.Radiobutton(
+            frame, text="Hex", variable=self.otp_returntype, value="hex"
+        )
+        otp_return_both = tk.Radiobutton(
+            frame, text="Both", variable=self.otp_returntype, value="both"
+        )
+
+        otp_input_label = tk.Label(frame, font=("Arial", 10), text="Input:").place(
+            relx=0.65, rely=0.02
+        )
+        otp_key_label = tk.Label(
+            frame,
+            font=("Arial", 10),
+            text="Key: (If blank, a key will be generated and returned here)",
+        )
+        otp_output_label = tk.Label(frame, font=("Arial", 10), text="Output:").place(
+            relx=0.65, rely=0.52
+        )
+        otp_outputtype_label = tk.Label(
+            frame, font=("Arial", 10), text="Would you like your output in..."
+        )
+
+        # Radiobutton encode decode (only for )
+        label4_otp = tk.Label(
+            frame,
+            font=("Arial", 10),
+            text="Encrypt or decrypt? (Only checked for text pad)",
+        )
+
+        self.otp_encordec = tk.StringVar()
+        encbutton = tk.Radiobutton(
+            frame, text="Encrypt", variable=self.otp_encordec, value="e"
+        )
+        decbutton = tk.Radiobutton(
+            frame, text="Decrypt", variable=self.otp_encordec, value="d"
+        )
+
+        self.otp_input = tk.Text(frame, height=10, width=40)
+        self.otp_key = tk.Text(frame, height=10, width=40)
+        self.otp_output = tk.Text(frame, height=10, width=40)
+
+        self.otp_button = tk.Button(
+            frame,
             height=2,
             width=20,
-            text="Do the thing.",
+            text="Encrypt/Decrypt",
+            # CALL FUNCTION HERE.
             command=lambda: self.func_otp_input(),
         )
 
         self.otp_label.place(x=25, y=25)
-        self.otp_input.place(relx=0.75, rely=0.05)
-        self.otp_output.place(relx=0.75, rely=0.30)
-        self.otp_button.place(relx=0.75, rely=0.55)
+        self.otp_input.place(relx=0.65, rely=0.05)
+        self.otp_key.place(relx=0.65, rely=0.30)
+        self.otp_output.place(relx=0.65, rely=0.55)
+        self.otp_button.place(relx=0.65, rely=0.85)
+
+        self.label1_otp.place(relx=0.4, rely=0.05)
+        label2_otp.place(relx=0.4, rely=0.2)
+        label3_otp.place(relx=0.4, rely=0.37)
+        label4_otp.place(relx=0.4, rely=0.7)
+
+        otp_binary_button.place(relx=0.4, rely=0.23)
+        otp_octal_button.place(relx=0.4, rely=0.26)
+        otp_decimal_button.place(relx=0.4, rely=0.29)
+        otp_hex_button.place(relx=0.4, rely=0.32)
+
+        otp_key_button_none.place(relx=0.4, rely=0.4)
+        otp_binary_key_button.place(relx=0.4, rely=0.43)
+        otp_octal_key_button.place(relx=0.4, rely=0.46)
+        otp_decimal_key_button.place(relx=0.4, rely=0.49)
+        otp_hex_key_button.place(relx=0.4, rely=0.52)
+
+        otp_key_label.place(relx=0.65, rely=0.27)
+        otp_outputtype_label.place(relx=0.4, rely=0.57)
+
+        encbutton.place(relx=0.4, rely=0.73)
+        decbutton.place(relx=0.4, rely=0.76)
+
+        otp_return_bin.place(relx=0.4, rely=0.6)
+        otp_return_hex.place(relx=0.4, rely=0.63)
+        otp_return_both.place(relx=0.4, rely=0.66)
 
     def func_otp_input(self):
-        input = self.otp_input.get("1.0", "end-1c")
         # Call OTP code here.
-        out = "hello"  # one-time pad output goes here
-        self.otp_output.insert("1.0", out)
+        # Check what type of OTP the user wants.
+        message: str = self.otp_input.get("1.0", "end-1c")
+        key: str = self.otp_key.get("1.0", "end-1c")
+        if self.otp_padtype.get() == "textpad":
+            # Text pad
+            optype: str = self.otp_encordec.get()
+            ret1, ret2 = OneTimePad.textPad(optype, message, key)
+        else:
+            # Digital pad
+            # Get inputs from user on format of their number inputs
+            base: int = int(self.otp_text_numtype.get())
+            keybase: int = int(self.otp_key_numtype.get())
+            # Get input type
+            print(f"base {base}, keybase, {keybase}")
+            inttexttype = int(self.otp_text_numtype.get())
+            intkeytype = int(self.otp_key_numtype.get())
+            if inttexttype == 2:
+                # Binary
+                message = "0b" + message
+            elif inttexttype == 8:
+                # Octal
+                message = "0" + message
+            elif inttexttype == 16:
+                # Hex
+                message = "0x" + message
+
+            if intkeytype == 2:
+                # Bin
+                key = "0b" + key
+            elif intkeytype == 8:
+                # Octal
+                key = "0" + key
+            elif intkeytype == 16:
+                # Hex
+                key = "0x" + key
+            ret1, ret2 = OneTimePad.digitalPad(base, message, keybase, key)
+        # Then, set output to appropriate box(es) based on user input
+        self.otp_output.delete("1.0", "end")
+
+        if self.otp_returntype == "binary":
+            ret1 = bin(ret1)
+        elif self.otp_returntype == "hex":
+            ret1 = hex(ret1)
+        else:
+            ret1 = "Binary:" + bin(ret1) + "\nHex:" + hex(ret1)
+
+        self.otp_output.insert("1.0", ret1)
+        if key != "":
+            self.otp_key.delete("1.0", "end")
+            if intkeytype == 2:
+                ret2 = bin(ret2)
+            elif intkeytype == 8:
+                ret2 = oct(ret2)
+            elif intkeytype == 16:
+                ret2 = hex(ret2)
+            self.otp_key.insert("1.0", ret2)
+        print(f"base {base}, input {message}, keybase {keybase}, key {key}")
 
 
 class RsaPage:
