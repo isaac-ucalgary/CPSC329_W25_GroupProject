@@ -50,30 +50,127 @@
 \import{}{title_page}
 
 
+\newgeometry{
+	left=2.0cm,
+	right=2.0cm,
+	top=2.0cm,
+	bottom=2.5cm,
+}
 % ----- MAIN DOCUMENT -----
 \begin{multicols}{2}
 	\begin{spacing}{1.125}
 		\tableofcontents
 
 		\section{Introduction}
-		Cryptography secures virtually all digital communication today, yet its core concepts can seem abstract without hands‑on exploration. In this project, we present a unified toolkit that brings three cryptographic techniques to life: frequency analysis, RSA, and the one‑time pad. We will talk about how each tool works and why they are useful.
+		Cryptography secures virtually all digital communication today, yet its
+		core concepts can seem abstract without hands‑on exploration. In this
+		project, we present a unified toolkit that brings three cryptographic
+		techniques to life: \textit{Frequency Analysis}, \textit{RSA}, and the
+		\textit{One‑Time-Pad}. We will talk about how each tool works and why they
+		are useful.
 
 
-  		% ----- Tool Headers -----
-        	\section{Frequency Analysis}
-       		The frequency analysis tool developed in this project is designed to deconstruct any given text by counting the occurrences of each character or symbol. Essentially, the tool converts raw text into a statistical distribution, revealing hidden patterns within the data. By iterating over every character in a string and maintaining a count of its occurrences using Python’s dictionary data structure, the tool generates a clear frequency profile. This profile is particularly valuable in the context of classic substitution ciphers, as certain letters—such as “E” in English—tend to appear more frequently than others. In ciphertext, such frequency patterns can guide cryptanalysts in making informed guesses about the correspondence between encrypted symbols and common letters in the target language, thereby aiding the decryption process.
+		% ----- Tool Headers -----
+		\section{Frequency Analysis}
+		The frequency analysis tool developed in this project is designed to
+		deconstruct any given text by counting the occurrences of each character or
+		symbol. Essentially, the tool converts raw text into a statistical
+		distribution, revealing hidden patterns within the data. By iterating over
+		every character in a string and maintaining a count of its occurrences
+		using Python’s dictionary data structure, the tool generates a clear
+		frequency profile. This profile is particularly valuable in the context of
+		classic substitution ciphers, as certain letters—such as \textit{'E'} in
+		English—tend to appear more frequently than others. In a ciphertext, such
+		frequency patterns can guide cryptanalysts in making informed guesses about
+		the correspondence between the encrypted characters and common letters in
+		the target language, thereby aiding the cryptographic attack process.
 
-		In any natural language, some letters and symbols occur more frequently than others. For instance, English texts typically feature 'E' as the most common letter, followed by letters like 'T', 'A', and 'O'. A simple substitution cipher—which replaces each plaintext letter with a unique symbol—tends to preserve these natural frequencies. This means that even though the letters have been scrambled, the relative proportions of each character remain largely intact. By carefully counting how many times each symbol appears in the ciphertext, it is possible to generate a frequency profile—a kind of statistical fingerprint of the text. This profile can then be compared to the known frequency distribution of the target language. This makes it easier to decipher the original text.  
+		In any natural language, some letters and symbols occur more frequently
+		than others. For instance, English texts typically feature \textit{'E'} as
+		the most common letter, followed by letters like \textit{'T'},
+		\textit{'A'}, and \textit{'O'}. A transposition cipher which scrambles
+		all the letters in a plaintext will perfectly preserve these
+		natural frequencies. This means that even though the letters have been
+		replaced, the relative proportions of each character remain fully
+		intact. By carefully counting how many times each symbol appears in the
+		ciphertext, it is possible to generate a frequency profile—a kind of
+		statistical fingerprint of the text. This profile can then be compared to
+		the known frequency distribution of the target language. This makes it
+		easier to decipher the original ciphertext.
 
-        	\section{RSA}
-        	This RSA tool, implemented in Zig, parses and formats both public and private keys based on well-known standards (RFC 4253 for public keys and RFC 8017 for private keys). It converts text messages into big integers and then uses modular exponentiation to perform encryption and decryption. Key functions include decoding keys from base64 or PEM formats, extracting components like exponents and moduli, and handling large-number arithmetic (such as computing multiplicative inverses via the extended Euclidean algorithm), all of which work together to securely transform data.
+		\section{One-Time Pad}
+		This OTP tool, implemented in Python, provides two complementary interfaces
+		— \textit{textPad} for alphanumeric messages and \textit{digitalPad} for
+		binary/hexadecimal data — anchored by the \textit{OTPmain} menu. In text
+		mode, the program sanitizes user input to include only alphanumeric
+		characters, then either accepts a user‑provided pad or generates a truly
+		random pad of equal length (repeating it if necessary). Encryption maps
+		each character to its index in lettercodes, adds the corresponding pad
+		index modulo 36, and converts the result back to a character; decryption
+		subtracts the pad index instead of adding it. In digital mode, the tool
+		auto‑detects whether the input is binary, octal, decimal, or hexadecimal,
+		parses it into an integer, and similarly accepts or generates a random key
+		of matching bit‑length. It then performs a bitwise XOR between the message
+		integer and the key, outputting ciphertext and pad in both binary and
+		hexadecimal formats. Both modes loop to allow repeated operations until the
+		user chooses to exit—achieving perfect secrecy across both text and digital
+		data.
 
-		RSA is very valuable for cryptography because it facilitates secure communication through the use of asymmetric key pairs—one key for encryption and a different one for decryption. The method relies on complex mathematical operations, particularly the difficulty of factoring the product of two large prime numbers, making it practically infeasible to reverse without the corresponding private key. This inherent challenge ensures that only those with the proper private key can decrypt and access the data. These properties make RSA great for protecting data transmissions, verifying digital signatures, and supporting secure authentication protocols across various applications.
-  
-        	\section{One-Time Pad}
-        	This OTP tool, implemented in Python, provides two complementary interfaces—textPad for alphanumeric messages and digitalPad for binary/hexadecimal data—anchored by the OTPmain menu. In text mode, the program sanitizes user input to include only characters from a predefined lettercodes list, then either accepts a user‑provided pad or generates a truly random pad of equal length (repeating it if necessary). Encryption maps each character to its index in lettercodes, adds the corresponding pad index modulo 36, and converts the result back to a character; decryption subtracts the pad index instead of adding it. In digital mode, the tool auto‑detects whether the input is binary or hexadecimal, parses it into an integer, and similarly accepts or generates a random key of matching bit‑length. It then performs a bitwise XOR between the message integer and the key, outputting ciphertext and pad in both binary and hexadecimal formats. Both modes loop to allow repeated operations until the user chooses to exit—achieving perfect secrecy across both text and digital data.
+		The one‑time pad achieves perfect secrecy by combining plaintext with a
+		truly random, single‑use key at least as long as the message, ensuring that
+		the resulting ciphertext is statistically independent of — and thus reveals
+		no information about — the original text. By providing both a
+		modular‑arithmetic interface for alphanumeric messages and a bitwise‑XOR
+		interface for binary/hex data, this tool vividly demonstrates the three
+		critical requirements for OTP security—genuinely random key generation,
+		strict one‑time use, and secure key management—offering a hands‑on
+		exploration of information‑theoretic security and one-time-pad remains the
+		only cryptosystem to have perfect secrecy.
 
-		The one‑time pad achieves perfect secrecy by combining plaintext with a truly random, single‑use key at least as long as the message, ensuring that the resulting ciphertext is statistically independent of—and thus reveals no information about—the original text. By providing both a modular‑arithmetic interface for alphanumeric messages and a bitwise‑XOR interface for binary/hex data, this tool vividly demonstrates the three critical requirements for OTP security—genuinely random key generation, strict one‑time use, and secure key management—offering a hands‑on exploration of information‑theoretic security and reinforcing why one‑time pads remain the gold standard for absolute confidentiality.
+		\section{RSA}
+		This RSA tool, implemented in Zig, parses and formats both public and
+		private keys based on industry standards (RFC 4253 for public keys and RFC
+		8017 for private keys). It converts text messages into big integers and
+		then uses modular exponentiation to perform encryption and decryption. Key
+		functions include decoding base-64 PEM formatted keys, extracting
+		components like exponents and moduli, and efficiently computing
+		large-number arithmetic (such as computing multiplicative inverses via the
+		extended Euclidean algorithm), all of which work together to securely
+		transform data.
+
+		RSA is very valuable for cryptography because it facilitates secure
+		communication through the use of asymmetric key pairs — one key for
+		encryption and a different one for decryption. The method relies on complex
+		mathematical operations, particularly the difficulty of factoring large
+		prime numbers, making it practically infeasible to reverse without the
+		corresponding private key. This inherent challenge ensures that only those
+		with the proper private key can decrypt and access the data. These
+		properties make RSA great for protecting data transmissions, verifying
+		digital signatures, exchanging keys for other non-public-key cryptosystems,
+		and supporting secure authentication protocols across various applications.
+
+
+
+		% --- Resources ---
+		\section{Resources}
+		\subsection{Frequency Analysis}
+		\begin{itemize}
+			\item \citetitle{101computing_frequency_analysis_2019} \cite{101computing_frequency_analysis_2019}
+		\end{itemize}
+		\subsection{One-Time-Pad}
+		\begin{itemize}
+			\item \citetitle{rublon_onetime_password_vs_pad_2024} \cite{rublon_onetime_password_vs_pad_2024}
+		\end{itemize}
+		\subsection{RSA}
+		\begin{itemize}
+			\item \textit{\citefield{rfc4253}{howpublished}:} \citetitle{rfc4253}\cite{rfc4253}
+			\item \textit{\citefield{rfc8017}{howpublished}:} \citetitle{rfc8017} \cite{rfc8017}
+			\item \citetitle{wiki:ASN.1} \cite{wiki:ASN.1}
+			\item \citetitle{wiki:X.690} \cite{wiki:X.690}
+			\item \citetitle{wiki:PKCS_1} \cite{wiki:PKCS_1}
+			\item \citetitle{wiki:RSA_cryptosystem} \cite{wiki:RSA_cryptosystem}
+			\item \citetitle{rsa_encryption_brilliant} \cite{rsa_encryption_brilliant}
+		\end{itemize}
 
 
 		% --- Contributions ---
@@ -81,6 +178,7 @@
 		\subsection{Clark, James}
 		\begin{itemize}
 			\item Frequency Analysis
+			\item GUI/App
 		\end{itemize}
 		\subsection{Davies, Ethan}
 		\begin{itemize}
@@ -92,7 +190,11 @@
 		\end{itemize}
 		\subsection{Shiells Thomas, Isaac}
 		\begin{itemize}
-			\item RSAA
+			\item RSA
+			\item One-Time-Pad (Refactor)
+			\item Code Cleanup
+			\item Latex
+			\item File Organization
 		\end{itemize}
 
 		% --- References ---
