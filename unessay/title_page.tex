@@ -1,0 +1,119 @@
+%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%% SETUP %%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[11pt, class=article, crop=false, tikz=true]{standalone}
+
+% --- Pictures ---
+\usepackage{graphicx} % Pictures
+\usepackage{tikz} % Positioning
+
+% --- Page Layout ---
+\usepackage{tabularx} % Advanced tables
+\usepackage{setspace} % Line spacing
+
+% Margins
+\usepackage{geometry}
+
+% Other setup
+\parindent 0pt
+\parskip 3mm
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%% VARIABLES %%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\Title}{ Educational Program for Cryptographic Tools Unessay }
+\newcommand{\Class}{CPSC 329}
+\newcommand{\ClassTitle}{Explorations in Information Security and Privacy}
+\newcommand{\AssignmentTitle}{Final Project Unessay}
+\newcommand{\Date}{April 11, 2025}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%% COMMANDS %%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\TitleboxMain}[3]{
+	\begin{spacing}{1.5}
+		\hrule height 0.5pt depth #3pt
+		\vspace*{-6.5pt}
+		\vspace*{#2pt}
+		{\bf \huge
+			#1
+		}
+		\vspace*{#2pt}
+		\hrule height 0.5pt depth #3pt
+	\end{spacing}
+}
+
+\newcommand{\AssignmentInfoBox}{
+	{\bf \Large
+			\Class:\\
+			\ClassTitle \\[2pt]
+			-- \\[2pt]
+			\AssignmentTitle \\
+		}
+}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%% DOCUMENT %%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+\newgeometry{
+	left=2.0cm,
+	right=2.0cm,
+	top=0cm,
+	bottom=0cm,
+}
+\begin{titlepage}
+	\begin{center}
+
+		% ----- UCalgary LOGO -----
+		\begin{tikzpicture}[
+				remember picture,
+				overlay,
+				shift={(current page.north)},
+			]
+			\node[anchor=center, xshift=0cm, yshift=-0.25\paperwidth]{
+				\includegraphics[width=7cm]{./assets/UCalgary_Logo.png}
+			};
+		\end{tikzpicture}
+
+		% ----- Main Title -----
+		\vspace*{0.45\paperwidth}
+		\TitleboxMain{ Educational Program for Cryptographic Tools Unessay }{5.5}{0}
+
+		% ----- Assignment Info -----
+		\vspace*{0.9cm}
+		\AssignmentInfoBox
+
+		% ----- Date -----
+		\vfill
+		{\large \Date}
+
+		% ----- Authors & Group -----
+		{\vfill
+			\begin{tabularx}{ 0.8\textwidth }{
+					>{\hsize=1\hsize\raggedleft\arraybackslash}X |
+					>{\hsize=.3\hsize\raggedright\arraybackslash}X
+					>{\hsize=.7\hsize\raggedright\arraybackslash}X
+				}
+				\textbf{Authors}      & \textbf{Group:}   & 5   \\
+				Clark, James          & \textbf{Lecture:} & L01 \\
+				Davies, Ethan         &                   &     \\
+				Owen, Gwilym          &                   &     \\
+				Shiells Thomas, Isaac &                   &     \\
+			\end{tabularx}
+			\vspace*{0.15\paperwidth}
+		}
+	\end{center}
+\end{titlepage}
+\restoregeometry
+\end{document}
