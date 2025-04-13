@@ -8,11 +8,10 @@ from dataclasses import dataclass
 # from tkinter import *
 from tkinter import Tk, filedialog, ttk
 
-import rsa_parse
-
 # ----- LOCAL IMPORTS -----
 from frequency_analysis import frequency_analysis
 from one_time_pad import OneTimePad
+from rsa import rsa_parse
 
 # import OTP here...
 
@@ -634,7 +633,6 @@ class RsaPage:
         plain_file: str = self.in_plainfile_rsa.get()
         plain_text: str = self.plaintext_rsa.get("1.0", "end-1c")
         ciph_file: str = self.in_ciphfile_rsa.get()
-        ciph_text: str = self.ciphtext_rsa.get("1.0", "end-1c")
 
         # Determine input from user
         # Default to text inputs.
@@ -666,10 +664,8 @@ class RsaPage:
                     source = plain_file
                     source_type = rsa_parse.SourceType.FILE
             else:
-                source = ciph_text
-                if ciph_file:
-                    source = ciph_file
-                    source_type = rsa_parse.SourceType.FILE
+                source = ciph_file
+                source_type = rsa_parse.SourceType.FILE
 
             # Perform RSA
             returned = rsa_parse.rsa_parse(
