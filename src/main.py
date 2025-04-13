@@ -293,14 +293,14 @@ class OneTimePadPage:
             relx=0.65, rely=0.52
         )
         otp_outputtype_label = tk.Label(
-            frame, font=("Arial", 10), text="Would you like your output in..."
+            frame, font=("Arial", 10), text="(Digital pad) Preferred output format:"
         )
 
         # Radiobutton encode decode (only for )
         label4_otp = tk.Label(
             frame,
             font=("Arial", 10),
-            text="Encrypt or decrypt? (Only checked for text pad)",
+            text="(Text pad) Encrypt or decrypt?",
         )
 
         self.otp_encordec = tk.StringVar()
@@ -364,14 +364,22 @@ class OneTimePadPage:
         if self.otp_padtype.get() == "textpad":
             # Text pad
             optype: str = self.otp_encordec.get()
-            ret1, ret2 = OneTimePad.textPad(optype, message, key)
+            if optype == "e":
+                ret1, ret2 = OneTimePad.textPad(optype, message, key)
+                self.otp_key.delete("1.0", "end")
+                self.otp_key.insert("1.0", ret2)
+            else:
+                ret1 = OneTimePad.textPad(optype, message, key)
+
+            self.otp_output.delete("1.0", "end")
+            self.otp_output.insert("1.0", ret1)
+
         else:
             # Digital pad
             # Get inputs from user on format of their number inputs
             base: int = int(self.otp_text_numtype.get())
             keybase: int = int(self.otp_key_numtype.get())
             # Get input type
-            print(f"base {base}, keybase, {keybase}")
             inttexttype = int(self.otp_text_numtype.get())
             intkeytype = int(self.otp_key_numtype.get())
             if inttexttype == 2:
@@ -394,27 +402,25 @@ class OneTimePadPage:
                 # Hex
                 key = "0x" + key
             ret1, ret2 = OneTimePad.digitalPad(base, message, keybase, key)
+            if self.otp_returntype == "binary":
+                ret1 = bin(ret1)
+            elif self.otp_returntype == "hex":
+                ret1 = hex(ret1)
+            else:
+                ret1 = "Binary:" + bin(ret1) + "\nHex:" + hex(ret1)
+            self.otp_output.delete("1.0", "end")
+
+            self.otp_output.insert("1.0", ret1)
+            if key == "":
+                self.otp_key.delete("1.0", "end")
+                if intkeytype == 2:
+                    ret2 = bin(ret2)
+                elif intkeytype == 8:
+                    ret2 = oct(ret2)
+                elif intkeytype == 16:
+                    ret2 = hex(ret2)
+                self.otp_key.insert("1.0", ret2)
         # Then, set output to appropriate box(es) based on user input
-        self.otp_output.delete("1.0", "end")
-
-        if self.otp_returntype == "binary":
-            ret1 = bin(ret1)
-        elif self.otp_returntype == "hex":
-            ret1 = hex(ret1)
-        else:
-            ret1 = "Binary:" + bin(ret1) + "\nHex:" + hex(ret1)
-
-        self.otp_output.insert("1.0", ret1)
-        if key != "":
-            self.otp_key.delete("1.0", "end")
-            if intkeytype == 2:
-                ret2 = bin(ret2)
-            elif intkeytype == 8:
-                ret2 = oct(ret2)
-            elif intkeytype == 16:
-                ret2 = hex(ret2)
-            self.otp_key.insert("1.0", ret2)
-        print(f"base {base}, input {message}, keybase {keybase}, key {key}")
 
 
 class RsaPage:
@@ -454,7 +460,7 @@ class RsaPage:
                     "OVERWRITTEN, and any text in the relevant output field may also be overwtritten. ",
                     "By default, the program looks for files. There are pre-generated key pairs in ",
                     "the folder /src/rsa/rsa_test_keys, or you can bring your own (as long as they ",
-                    "follow the RFC-8017 standard)",
+                    "follow the appropriate RFC standard)",
                 ]
             ),
         )
@@ -628,7 +634,6 @@ class RsaPage:
         plain_file: str = self.in_plainfile_rsa.get()
         plain_text: str = self.plaintext_rsa.get("1.0", "end-1c")
         ciph_file: str = self.in_ciphfile_rsa.get()
-        ciph_text: str = self.ciphtext_rsa.get("1.0", "end-1c")
 
         # Determine input from user
         # Default to text inputs.
@@ -660,7 +665,6 @@ class RsaPage:
                     source = plain_file
                     source_type = rsa_parse.SourceType.FILE
             else:
-                source = ciph_text
                 if ciph_file:
                     source = ciph_file
                     source_type = rsa_parse.SourceType.FILE

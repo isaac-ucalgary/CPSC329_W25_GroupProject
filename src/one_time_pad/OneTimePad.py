@@ -86,7 +86,7 @@ def textPad(optype: str, text: str, key: str):
         # temp = input(
         #    "Please enter the one time pad you want to use, or leave this blank to generate one: "
         # )
-        onetime: str = LetterCodes.filter(text)
+        onetime: str = LetterCodes.filter(key)
 
         # If the one time pad is blank or invalid, generate one
         if onetime == "":
